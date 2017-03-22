@@ -1,24 +1,24 @@
 var readline = require("readline"),
 	vm2 = require("vm2"),
 	rl = readline.createInterface({
-		input: process.stdin,
-		terminal: false
-	});
+		input: process.stdin
+	}),
+	vm;
 	
 rl.on("line", line => {
-	var value, err;
+	var result, err;
 	try {
-		value = processLine(line);
+		result = processLine(line);
 	} catch (_err) {
 		err = _err;
 	}
-	var out;
 	if (err) {
-		out = {status: "error", error: err.message};
+		result = {status: "error", error: err.message};
 	} else {
-		out = {status: "success", value: value};
+		result = result || {};
+		result.status = "success";
 	}
-	console.log(JSON.stringify(out));
+	console.log(JSON.stringify(result));
 });
 
 function processLine(input) {
@@ -28,9 +28,16 @@ function processLine(input) {
 			return createVM(input);
 			
 		case "close":
+			setImmediate(() => rl.close());
 			return destroyVM();
 			
 		default:
+			if (!vm) {
+				throw new Error("VM is not actived");
+			}
+			if (!vm.hasOwnProperty(input.action)) {
+				throw new Error("Unknown action: " + input.action);
+			}
 			return vm[input.action](input);
 	}
 }
@@ -44,36 +51,48 @@ function createVM(input) {
 			return createNodeVM(input);
 			
 		default:
-			throw new Error("Unknown VM type: " + type);
+			throw new Error("Unknown VM type: " + input.type);
 	}
 }
 
-var vm;
-
 function destroyVM() {
 	vm = null;
-	setImmediate(() => rl.close());
 }
 
 function createNormalVM(input) {
 	var _vm = new vm2.VM(input.options);
+	vm = {
+		run({code}) {
+			return {
+				value: _vm.run(code)
+			};
+		},
+		call({functionName, args}) {
+			return {
+				value: _vm.run(functionName)(...args)
+			};
+		}
+	};
 	if (input.code) {
 		_vm.run(input.code);
 	}
-	vm = {
-		run({code}) {
-			return _vm.run(code);
-		},
-		call({functionName, args}) {
-			return _vm.run(functionName)(...args);
-		}
-	};
 }
 
 function createNodeVM(input) {
+	if (!input.options) {
+		input.options = {};
+	}
+	var console;
+	if (input.options.console != "off") {
+		console = nodeVmConsole(input.options.console);
+		input.options.console = "redirect";
+	}
 	var _vm = new vm2.NodeVM(input.options),
 		modules = {},
 		_id = 1;
+	if (console) {
+		console.register(_vm);
+	}
 	vm = {
 		run({code, filename}) {
 			modules[_id] = _vm.run(code, filename);
@@ -82,17 +101,57 @@ function createNodeVM(input) {
 		get({id}) {
 			return modules[id];
 		},
-		call({id, args}) {
+		call({id, args = []}) {
 			return modules[id](...args);
 		},
 		getMember({id, member}) {
 			return modules[id][member];
 		},
-		callMember({id, member, args}) {
+		callMember({id, member, args = []}) {
 			return modules[id][member](...args);
 		},
 		destroy({id}) {
 			delete modules[id];
 		}
+	};
+	for (const [key, fn] of Object.entries(vm)) {
+		vm[key] = input => {
+			var result = {
+				value: fn(input)
+			};
+			if (console) {
+				return console.assign(result);
+			}
+			return result;
+		};
+	}
+}
+
+function nodeVmConsole(type = "inherit") {
+	var data = {
+		log: "",
+		warn: "",
+		error: ""
+	};
+	return {
+		assign(o) {
+			Object.assign(o, data);
+			data.log = "";
+			data.warn = "";
+			data.error = "";
+			return o;
+		},
+		register(vm) {
+			vm.on("console.log", (...args) => {
+				data.log += args.join(" ") + "\n";
+			});
+			vm.on("console.error", (...args) => {
+				data.error += args.join(" ") + "\n";
+			});
+			vm.on("console.warn", (...args) => {
+				data.warn += args.join(" ") + "\n";
+			});
+		},
+		type
 	};
 }

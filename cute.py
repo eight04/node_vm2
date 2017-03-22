@@ -5,7 +5,11 @@ from xcute import cute, Exc, Bump
 cute(
 	pkg_name = "node_vm2",
 	# default = "python -m comiccrawler gui",
-	test = ['pylint {pkg_name}', 'readme_build'],
+	test = [
+		'eslint **/*.js --ignore-path .gitignore',
+		'pylint {pkg_name}',
+		'readme_build'
+	],
 	bump = Bump('{pkg_name}/__pkginfo__.py'),
 	bump_pre = 'test',
 	bump_post = ['dist', 'release', 'publish', 'install'],
