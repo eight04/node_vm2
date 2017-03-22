@@ -1,30 +1,31 @@
 node_vm2
 ========
 
-A Python 3 to Node + vm2 binding, to safely execute JavaScript in Python.
+A Python 3 to Node.js + vm2 binding, helps you execute JavaScript safely.
 
 Install
 -------
 
-You need Node.js first.
+You need Node.js
+
 https://nodejs.org/
 
 Install from pypi wheel.
 
-.. codeblock::
+.. code-block::
 
    pip install node_vm2
 
-Also make sure you have `node` executable in `PATH`, or you can specify the executable with environment variable `NODE_EXECUTABLE`.
+Also make sure you have ``node`` executable in ``PATH``, or you can specify the executable with environment variable ``NODE_EXECUTABLE``.
 
-Additionally, you will need `npm` to build node_vm2 from source.
+Additionally, you will need ``npm`` to build node_vm2 from source.
 
 Usage
 -----
 
-Most of the APIs are compatible with `vm2 <https://github.com/patriksimek/vm2>`.
+Most of the APIs are compatible with `vm2 <https://github.com/patriksimek/vm2>`__.
 
-.. codeblock:: python
+.. code-block:: python
 
    from node_vm2 import VM
    
