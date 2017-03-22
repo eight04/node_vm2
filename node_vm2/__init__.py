@@ -61,7 +61,7 @@ class NodeBridge:
 			raise VMError("The VM is closed")
 			
 		args = [NODE_EXECUTABLE, VM_SERVER]
-		self.process = Popen(args, bufsize=0, stdin=PIPE, stdout=PIPE, encoding="utf-8")
+		self.process = Popen(args, bufsize=0, stdin=PIPE, stdout=PIPE)
 		self.onconnect()
 		self.closed = False
 		return self
@@ -87,12 +87,13 @@ class NodeBridge:
 		
 		The object must be json-encodable.
 		"""
-		self.process.stdin.write(json.dumps(o) + "\n")
+		text = json.dumps(o) + "\n"
+		self.process.stdin.write(text.encode("utf-8"))
 		return self
 	
 	def read(self):
 		"""Read the output from Node."""
-		out = self.process.stdout.readline()
+		out = self.process.stdout.readline().decode("utf-8")
 		data = json.loads(out)
 		if data["status"] != "success":
 			raise VMError(data["error"])
