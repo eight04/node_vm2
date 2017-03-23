@@ -13,12 +13,12 @@ A Python 3 to Node.js + vm2 binding, helps you execute JavaScript safely.
 vm2
 ---
 
-`vm2 <https://github.com/patriksimek/vm2>`__ is a node module to create **real** sandbox in node. The official node API `vm <https://nodejs.org/api/vm.html>`__ just create isolate scope and doesn't prevent harmful code to damage your computer.
+`vm2 <https://github.com/patriksimek/vm2>`__ is a node module to create **real** sandbox in node. The official node API `vm <https://nodejs.org/api/vm.html>`__, can only create isolate context and doesn't prevent harmful code to damage your computer.
 
 How it works
 ------------
 
-This module will launch a Node.js REPL server, which use JSON to communicate. All JavaScript code are encoded in JSON and sent to the server, after server executed the code in vm2, it reponse the result and let the module decode it back to Python values.
+The module launchs a Node.js REPL server, which can be communicated with JSON. All JavaScript code are encoded in JSON and sent to the server. After the server executing the code in vm2, the result is sent back to Python.
 
 Install
 -------
@@ -40,7 +40,7 @@ Additionally, you will need ``npm`` to build node_vm2 from source.
 Usage
 -----
 
-Most of the APIs are compatible with `vm2 <https://github.com/patriksimek/vm2>`__.
+Most of the APIs are bound to `vm2 <https://github.com/patriksimek/vm2>`__.
 
 .. code-block:: python
 
