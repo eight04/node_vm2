@@ -4,14 +4,12 @@ from xcute import cute, Exc, Bump
 
 cute(
 	pkg_name = "node_vm2",
-	# default = "python -m comiccrawler gui",
 	test = [
 		'eslint **/*.js --ignore-path .gitignore',
 		'pylint {pkg_name}',
 		'python test.py',
 		'readme_build'
 	],
-	bump = Bump('{pkg_name}/__pkginfo__.py'),
 	bump_pre = 'test',
 	bump_post = ['dist', 'release', 'publish', 'install'],
 	dist = 'python setup.py sdist bdist_wheel',
