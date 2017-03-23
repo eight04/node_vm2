@@ -9,7 +9,7 @@ A Python 3 to Node.js + vm2 binding, helps you execute JavaScript safely.
 There are 2 ways to specify ``node`` executable:
 
 1. Add the directory of ``node`` to ``PATH`` env variable.
-2. Set ``NODE_EXECUTABLE`` to the path of the executable.
+2. Set env variable ``NODE_EXECUTABLE`` to the path of the executable.
 """
 
 import abc
@@ -60,7 +60,23 @@ class NodeBridge:
 		self.close()
 		
 	def connect(self):
-		"""Create subprocess and connect to Node.js."""
+		"""Spawn a Node.js subprocess and run vm-server.
+		
+		vm-server is a REPL server, allows us to connect to it with stdios.
+		You can find the script at ``node_vm2/vm-server`` (`Github
+		<https://github.com/eight04/node_vm2/tree/master/node_vm2/vm-server>`__).
+		
+		Communicate with vm-server using JSON::
+		
+			> {"action": "create", "type": "VM"}
+			{"status": "success"}
+			
+			> {"action": "run", "code": "var a = 0; a += 10; a"}
+			{"status": "success", "value": 10}
+			
+			> {"action": "xxx"}
+			{"status": "error", "error": "Unknown action: xxx"}
+		"""
 		if self.closed:
 			raise VMError("The VM is closed")
 			
@@ -72,12 +88,12 @@ class NodeBridge:
 
 	@abc.abstractmethod
 	def onconnect(self):
-		# overwrite by subclasses
+		"""Abstract method. Called when successfully :meth:`connect`."""
 		pass
 	
 	def close(self):
-		"""Close the connection. Once connection is closed, you can't re-open
-		it."""
+		"""Close the connection. Once the connection is closed, it can't be 
+		re-open."""
 		if self.closed:
 			return self
 		self.send({"action": "close"})
@@ -86,17 +102,18 @@ class NodeBridge:
 		self.closed = True
 		return self
 	
-	def send(self, object):
-		"""Send object to Node.
+	def send(self, data):
+		"""Send data to Node.
 		
-		The object must be json-encodable.
+		:param data: must be json-encodable and follow vm-server's
+			protocol.
 		"""
-		text = json.dumps(object) + "\n"
+		text = json.dumps(data) + "\n"
 		self.process.stdin.write(text.encode("utf-8"))
 		return self
 	
 	def read(self):
-		"""Read the output from Node."""
+		"""Read the response from vm-server and return ``data["value"]``"""
 		out = self.process.stdout.readline().decode("utf-8")
 		data = json.loads(out)
 		self.onread(data)
@@ -105,7 +122,11 @@ class NodeBridge:
 		return data.get("value")
 		
 	def onread(self, data):
-		# status check
+		"""Called when successfully :meth:`read`.
+		
+		This method would raise an :class:`VMError` if vm-server response an
+		error.
+		"""
 		if data["status"] != "success":
 			raise VMError(data["error"])
 
@@ -115,7 +136,8 @@ class VM(NodeBridge):
 	def __init__(self, code=None, **options):
 		"""Create VM
 		
-		:param code: str. Optional. The JavaScript code to run after creating
+		:type code: str or None
+		:param code: Optional JavaScript code to run after creating
 			the VM. Useful to define some functions.
 			
 		:param options: The options for `vm2.VM`_.
@@ -125,7 +147,7 @@ class VM(NodeBridge):
 		self.options = options
 		
 	def onconnect(self):
-		# called by NodeBridge.connect
+		"""Create VM on connect."""
 		self.send({
 			"action": "create",
 			"type": "VM",
@@ -138,9 +160,9 @@ class VM(NodeBridge):
 		return self.send({"action": "run", "code": code}).read()
 		
 	def call(self, function_name, *args):
-		"""Call the function and return the result.
+		"""Call a function and return the result.
 		
-		:param function_name: The function to call.
+		:param str function_name: The function to call.
 		:param args: Function arguments.
 		"""
 		return self.send({
@@ -169,7 +191,7 @@ class NodeVM(NodeBridge):
 		self.console_error = None
 		
 	def onconnect(self):
-		# called by bridge
+		"""Create NodeVM on connect."""
 		self.send({
 			"action": "create",
 			"type": "NodeVM",
@@ -177,7 +199,10 @@ class NodeVM(NodeBridge):
 		}).read()
 		
 	def onread(self, data):
-		# called by bridge.read
+		"""Extend original method, extract ``data["console.log"]``,
+		``data["console.error"]`` to :attr:`NodeVM.console_log`,
+		:attr:`NodeVM.console_error`.
+		"""
 		if self.console == "inherit":
 			text = data.get("console.log")
 			if text is not None:
@@ -196,9 +221,11 @@ class NodeVM(NodeBridge):
 	def run(self, code, filename=None):
 		"""Run the code and return a :class:`NodeVMModule`
 		
-		:param code: the code to run. The code should work like a commonjs
-			module. See `vm2.NodeVM`_ for details.
-		:param filename: optional. Currently this argument has no effects.
+		:param str code: the code to be run. The code should work like a
+			commonjs module. See `vm2.NodeVM`_ for details.
+			
+		:param str filename: Optional, used for stack trace. Currently this
+			has no effect. (should vm-server send traceback back?)
 		:return: :class:`NodeVMModule`.
 		"""
 		id = self.send({
@@ -210,20 +237,21 @@ class NodeVM(NodeBridge):
 		
 	@classmethod
 	def code(cls, code, filename=None, **options):
-		"""Create a module in VM.
-		
-		.. code-block:: python
-		
-			with NodeVM.code(code) as module:
-				result = module.call_member("method")
-				
-		vs.
+		"""A class method helping you create a module in VM.
 		
 		.. code-block:: python
 		
 			with NodeVM() as vm:
 				module = vm.run(code)
 				result = module.call_member("method")
+				
+		vs.
+		
+		.. code-block:: python
+		
+			with NodeVM.code(code) as module:
+				result = module.call_member("method")
+				# access the vm with `module.vm`
 		"""
 		vm = cls(**options)
 		module = vm.connect().run(code, filename)
@@ -231,8 +259,8 @@ class NodeVM(NodeBridge):
 		return module
 		
 class NodeVMModule:
-	"""Since we can only pass primitive values between python and node, we use 
-	this wrapper to access module created from NodeVM.
+	"""Since we can only pass JSON between python and node, we use 
+	this wrapper to access the module created by :meth:`NodeVM.run`.
 	
 	This class shouldn't be initiated by users directly.
 	
@@ -252,8 +280,7 @@ class NodeVMModule:
 		}).read()
 		
 	def get(self):
-		"""Return the module, in case that the module itself is primitive
-		value.
+		"""Return the module, in case that the module itself is json-encodable.
 		"""
 		return self.vm.send({
 			"id": self.id,
@@ -261,7 +288,11 @@ class NodeVMModule:
 		}).read()
 		
 	def call_member(self, member, *args):
-		"""Call a function member."""
+		"""Call a function member.
+		
+		:param str member: Member's name.
+		:param args: Function arguments.
+		"""
 		return self.vm.send({
 			"id": self.id,
 			"action": "callMember",
@@ -270,7 +301,10 @@ class NodeVMModule:
 		}).read()
 		
 	def get_member(self, member):	
-		"""Return the member."""
+		"""Return member value.
+		
+		:param str member: Member's name.
+		"""
 		return self.vm.send({
 			"id": self.id,
 			"action": "getMember",
@@ -278,7 +312,10 @@ class NodeVMModule:
 		}).read()
 		
 	def destroy(self):
-		"""Destroy the module."""
+		"""Destroy the module.
+		
+		You don't need this if you can just close the VM.
+		"""
 		out = self.vm.send({
 			"id": self.id,
 			"action": "destroy"
@@ -293,7 +330,7 @@ class NodeVMModule:
 		return self
 		
 	def __exit__(self, exc_type, exc_value, tracback):
-		"""The VM will be closed if:
+		"""Close the VM if:
 		
 		1. This method is called.
 		2. The module is created by :meth:`NodeVM.code`.
@@ -304,7 +341,8 @@ class NodeVMModule:
 def eval(code, **options):
 	"""A shortcut to eval JavaScript.
 	
-	This function will create a :class:`VM`, run code, and return the result.
+	This function will create a :class:`VM`, run the code, and return the
+	result.
 	"""
 	with VM(**options) as vm:
 		return vm.run(code)
