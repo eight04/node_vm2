@@ -59,6 +59,14 @@ API reference
 
 http://node-vm2.readthedocs.io/
 
+Todos
+-----
+
+*  Use a global bridge for eval?
+*  Make one process be able to create multiple VMs?
+*  How to get async value?
+*  Multi-thread?
+
 Changelog
 ---------
 
