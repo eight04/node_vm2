@@ -28,6 +28,10 @@ def eval(code, **options):
 	
 	This function will create a :class:`VM`, run the code, and return the
 	result.
+	
+	Since each call to this function will create a VM, it is super slow if you
+	rapidly call it. Using :class:`VM` and :meth:`VM.run` is a better choice
+	in this case.
 	"""
 	with VM(**options) as vm:
 		return vm.run(code)
