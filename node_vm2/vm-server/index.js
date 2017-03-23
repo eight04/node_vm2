@@ -130,14 +130,13 @@ function createNodeVM(input) {
 function nodeVmConsole(type = "inherit") {
 	var data = {
 		log: "",
-		warn: "",
 		error: ""
 	};
 	return {
 		assign(o) {
-			Object.assign(o, data);
+			o["console.log"] = data.log;
+			o["console.error"] = data.error;
 			data.log = "";
-			data.warn = "";
 			data.error = "";
 			return o;
 		},
@@ -147,9 +146,6 @@ function nodeVmConsole(type = "inherit") {
 			});
 			vm.on("console.error", (...args) => {
 				data.error += args.join(" ") + "\n";
-			});
-			vm.on("console.warn", (...args) => {
-				data.warn += args.join(" ") + "\n";
 			});
 		},
 		type

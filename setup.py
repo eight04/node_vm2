@@ -6,8 +6,6 @@ from os import path
 from contextlib import contextmanager
 from subprocess import run
 
-import sys
-
 from setuptools import setup
 from setuptools.command.install import install as _install
 from setuptools.command.develop import develop as _develop
