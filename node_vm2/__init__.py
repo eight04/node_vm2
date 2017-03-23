@@ -12,7 +12,6 @@ There are 2 ways to specify ``node`` executable:
 2. Set env variable ``NODE_EXECUTABLE`` to the path of the executable.
 """
 
-import abc
 import json
 import sys
 
@@ -24,10 +23,15 @@ from .__pkginfo__ import __version__
 NODE_EXECUTABLE = environ.get("NODE_EXECUTABLE", "node")
 VM_SERVER = path.join(path.dirname(__file__), "vm-server")
 
-class VMError(Exception):
-	"""Errors thrown by VM."""
-	pass
+def eval(code, **options):
+	"""A shortcut to eval JavaScript.
 	
+	This function will create a :class:`VM`, run the code, and return the
+	result.
+	"""
+	with VM(**options) as vm:
+		return vm.run(code)
+		
 class NodeBridge:
 	"""The bridge to node process, extended by VMs and shouldn't be initiated
 	by users."""
@@ -86,11 +90,6 @@ class NodeBridge:
 		self.closed = False
 		return self
 
-	@abc.abstractmethod
-	def onconnect(self):
-		"""Abstract method. Called when successfully :meth:`connect`."""
-		pass
-	
 	def close(self):
 		"""Close the connection. Once the connection is closed, it can't be 
 		re-open."""
@@ -121,6 +120,10 @@ class NodeBridge:
 		# pylint: disable=no-member
 		return data.get("value")
 		
+	def onconnect(self):
+		"""Called when successfully :meth:`connect`."""
+		pass
+	
 	def onread(self, data):
 		"""Called when successfully :meth:`read`.
 		
@@ -271,6 +274,20 @@ class NodeVMModule:
 		self.vm = vm
 		self.CLOSE_ON_EXIT = False
 		
+	def __enter__(self):
+		"""This class can be used as a context manager. See :meth:`NodeVM.code`.
+		"""
+		return self
+		
+	def __exit__(self, exc_type, exc_value, tracback):
+		"""Close the VM if:
+		
+		1. This method is called.
+		2. The module is created by :meth:`NodeVM.code`.
+		"""
+		if self.CLOSE_ON_EXIT:
+			self.vm.close()
+			
 	def call(self, *args):
 		"""Call the module, in case that the module itself is a function."""
 		return self.vm.send({
@@ -324,25 +341,7 @@ class NodeVMModule:
 			self.vm.close()
 		return out
 		
-	def __enter__(self):
-		"""This class can be used as a context manager. See :meth:`NodeVM.code`.
-		"""
-		return self
-		
-	def __exit__(self, exc_type, exc_value, tracback):
-		"""Close the VM if:
-		
-		1. This method is called.
-		2. The module is created by :meth:`NodeVM.code`.
-		"""
-		if self.CLOSE_ON_EXIT:
-			self.vm.close()
-			
-def eval(code, **options):
-	"""A shortcut to eval JavaScript.
+class VMError(Exception):
+	"""Errors thrown by VM."""
+	pass
 	
-	This function will create a :class:`VM`, run the code, and return the
-	result.
-	"""
-	with VM(**options) as vm:
-		return vm.run(code)
