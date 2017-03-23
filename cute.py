@@ -8,6 +8,7 @@ cute(
 	test = [
 		'eslint **/*.js --ignore-path .gitignore',
 		'pylint {pkg_name}',
+		'python test.py',
 		'readme_build'
 	],
 	bump = Bump('{pkg_name}/__pkginfo__.py'),
