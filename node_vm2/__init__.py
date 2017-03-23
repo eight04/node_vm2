@@ -167,6 +167,16 @@ class VM(NodeBridge):
 		
 		:param str function_name: The function to call.
 		:param args: Function arguments.
+		
+		function_name can include "." to call function on object. However, it 
+		is called like
+		
+		.. code-block:: javascript
+		
+			var func = vm.run("function.to.call");
+			return func(...args);
+			
+		So ``this`` keyword might doesn't work as expected.
 		"""
 		return self.send({
 			"action": "call",
