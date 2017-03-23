@@ -1,6 +1,13 @@
 node_vm2
 ========
 
+.. image:: https://api.codacy.com/project/badge/Grade/fb30c7193b6b43cf818457e3ff23e60c
+   :target: https://www.codacy.com/app/eight04/node_vm2?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=eight04/node_vm2&amp;utm_campaign=Badge_Grade
+
+.. image:: https://readthedocs.org/projects/node-vm2/badge/?version=latest
+   :target: http://node-vm2.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
+
 A Python 3 to Node.js + vm2 binding, helps you execute JavaScript safely.
 
 Install
@@ -40,7 +47,7 @@ Most of the APIs are compatible with `vm2 <https://github.com/patriksimek/vm2>`_
 API reference
 -------------
 
-
+http://node-vm2.readthedocs.io/
 
 Changelog
 ---------
