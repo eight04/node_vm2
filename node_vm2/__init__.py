@@ -12,8 +12,10 @@ There are 2 ways to specify ``node`` executable:
 2. Set env variable ``NODE_EXECUTABLE`` to the path of the executable.
 """
 
+import atexit
 import json
 import sys
+from threading import Thread, Event, Lock
 
 from subprocess import Popen, PIPE
 from os import path, environ
@@ -36,135 +38,220 @@ def eval(code, **options):
 	with VM(**options) as vm:
 		return vm.run(code)
 		
-class NodeBridge:
-	"""The bridge to node process, extended by VMs and shouldn't be initiated
-	by users."""
+DEFAULT_BRIDGE = None
+
+def default_bridge():
+	global DEFAULT_BRIDGE
+	if DEFAULT_BRIDGE is not None:
+		return DEFAULT_BRIDGE
+		
+	DEFAULT_BRIDGE = VMServer()
+	DEFAULT_BRIDGE.start()
+	return DEFAULT_BRIDGE
+
+@atexit.register	
+def close():
+	if DEFAULT_BRIDGE is not None:
+		DEFAULT_BRIDGE.close()
+		
+class VMServer:
+	"""VMServer class, represent vm-server. See :meth:`start` for details."""
 	def __init__(self):
 		self.closed = None
 		self.process = None
+		self.poll_data = {}
+		self.poll_event = {}
+		self.read_lock = Lock()
+		self.write_lock = Lock()
+		self.inc = 1
 		
 	def __enter__(self):
-		"""The bridge can be used as a context manager, which automatically
-		:meth:`connect` the VM.
+		"""This class can be used as a context manager, which automatically
+		:meth:`start` the server.
 		
 		.. code-block:: python
 		
-			vm = VM()
-			vm.connect()
-			vm.run(code)
-			vm.close()
+			server = VMServer()
+			server.start()
+			# create VMs on the server...
+			server.close()
 			
 		vs.
 		
 		.. code-block:: python
 		
-			with VM() as vm:
-				vm.run(code)
+			with VMServer() as server:
+				# creaet VMs on the server...
 		"""
-		return self.connect()
+		return self.start()
 		
 	def __exit__(self, exc_type, exc_value, traceback):
 		"""See :meth:`close`."""
 		self.close()
 		
-	def connect(self):
+	def start(self):
 		"""Spawn a Node.js subprocess and run vm-server.
 		
-		vm-server is a REPL server, allows us to connect to it with stdios.
-		You can find the script at ``node_vm2/vm-server`` (`Github
+		vm-server is a REPL server, which allows us to connect to it with
+		stdios. You can find the script at ``node_vm2/vm-server`` (`Github
 		<https://github.com/eight04/node_vm2/tree/master/node_vm2/vm-server>`__).
 		
-		Communicate with vm-server using JSON::
+		Communication using JSON::
 		
-			> {"action": "create", "type": "VM"}
-			{"status": "success"}
+			> {"id": 1, "action": "create", "type": "VM"}
+			{"id": 1, "status": "success"}
 			
-			> {"action": "run", "code": "var a = 0; a += 10; a"}
-			{"status": "success", "value": 10}
+			> {"id": 2, "action": "run", "code": "var a = 0; a += 10; a"}
+			{"id": 2, "status": "success", "value": 10}
 			
-			> {"action": "xxx"}
-			{"status": "error", "error": "Unknown action: xxx"}
+			> {"id": 3, "action": "xxx"}
+			{"id": 3, "status": "error", "error": "Unknown action: xxx"}
 		"""
 		if self.closed:
 			raise VMError("The VM is closed")
 			
 		args = [NODE_EXECUTABLE, VM_SERVER]
 		self.process = Popen(args, bufsize=0, stdin=PIPE, stdout=PIPE)
-		self.onconnect()
+		data = self.communicate({"action": "ping"})
+		if data["status"] == "error":
+			raise VMError("Failed to start: " + data["error"])
 		self.closed = False
 		return self
 
 	def close(self):
-		"""Close the connection. Once the connection is closed, it can't be 
+		"""Close the server. Once the server is closed, it can't be 
 		re-open."""
 		if self.closed:
 			return self
-		self.send({"action": "close"})
+		data = self.communicate({"action": "close"})
+		if data["status"] == "error":
+			raise VMError("Failed to close: " + data["error"])
 		self.process.communicate()
 		self.process = None
 		self.closed = True
 		return self
-	
-	def send(self, data):
-		"""Send data to Node.
 		
-		:param data: must be json-encodable and follow vm-server's
-			protocol.
+	def generate_id(self):
+		"""Generate unique id for each communication."""
+		inc = self.inc
+		self.inc += 1
+		return inc
+		
+	def communicate(self, data):
+		"""Send data to Node and return the response.
+		
+		:param dict data: must be json-encodable and follow vm-server's
+			protocol. An unique id is automatically set on data.
+			
+		This method is thread-safe.
 		"""
+		id = self.generate_id()
+		data["id"] = id
+		self.poll_data[id] = None
+		self.poll_event[id] = Event()
 		text = json.dumps(data) + "\n"
-		self.process.stdin.write(text.encode("utf-8"))
-		return self
+		# FIXME: do we really need lock for write?
+		with self.write_lock:
+			self.process.stdin.write(text.encode("utf-8"))
+		def reader():
+			with self.read_lock:
+				data = self.process.stdout.readline()
+			data = json.loads(data.decode("utf-8"))
+			self.poll_data[data["id"]] = data
+			self.poll_event[data["id"]].set()
+		Thread(target=reader).start()
+		self.poll_event[id].wait()
+		data = self.poll_data[id]
+		del self.poll_data[id]
+		del self.poll_event[id]
+		return data
 	
-	def read(self):
-		"""Read the response from vm-server and return ``data["value"]``"""
-		out = self.process.stdout.readline().decode("utf-8")
-		data = json.loads(out)
-		self.onread(data)
-		# https://github.com/PyCQA/pylint/issues/922
-		# pylint: disable=no-member
-		return data.get("value")
+class BaseVM:
+	"""BaseVM class, containing some common method for VMs"""
+	def __init__(self, server=None):
+		"""Init the VM.
 		
-	def onconnect(self):
-		"""Called when successfully :meth:`connect`."""
+		:param VMServer server: Optional. If provided, the VM will be created
+			on the server. Otherwise, the VM will be created on a DEFAULT
+			server.
+		"""
+		if server is None:
+			server = default_bridge()
+		self.bridge = server
+		self.id = None
+		
+	def __enter__(self):
+		"""This class can be used as a context manager, which automatically
+		:meth:`create` when entering the context.
+		"""
+		self.create()
+		return self
+		
+	def __exit__(self, exc_type, exc_value, traceback):
+		"""See :meth:`destroy`"""
+		self.destroy()
+		
+	def before_create(self, data):
+		"""Overwrite. Extend data before creating the VM."""
 		pass
-	
-	def onread(self, data):
-		"""Called when successfully :meth:`read`.
+		
+	def create(self):
+		"""Create the VM."""
+		data = {"action": "create"}
+		self.before_create(data)
+		self.id = self.communicate(data)
+		return self
+		
+	def destroy(self):
+		"""Destroy the VM."""
+		self.communicate({"action": "destroy"})
+		self.id = None
+		return self
+		
+	def communicate(self, data):
+		"""Communicate with server. Wraps :meth:`VMServer.communicate` so we
+		can add additional properties to data.
 		
 		This method would raise an :class:`VMError` if vm-server response an
 		error.
 		"""
+		data["vmId"] = self.id
+		data = self.bridge.communicate(data)
+		self.after_read(data)
 		if data["status"] != "success":
 			raise VMError(data["error"])
+		return data.get("value")
+		
+	def after_read(self, data):
+		"""Overwrite. Extract data after read."""
+		pass
 
-class VM(NodeBridge):
+class VM(BaseVM):
 	"""VM class, represent `vm2.VM <https://github.com/patriksimek/vm2#vm>`_.
 	"""
-	def __init__(self, code=None, **options):
+	def __init__(self, code=None, server=None, **options):
 		"""Create VM
 		
-		:type code: str or None
-		:param code: Optional JavaScript code to run after creating
+		:param str code: Optional JavaScript code to run after creating
 			the VM. Useful to define some functions.
+			
+		:param VMServer server: Optional VMServer. See :meth:`BaseVM.__init__`
+			for details.
 			
 		:param options: The options for `vm2.VM`_.
 		"""
-		super().__init__()
+		super().__init__(server)
+		self.id = None
 		self.code = code
 		self.options = options
 		
-	def onconnect(self):
-		"""Create VM on connect."""
-		self.send({
-			"action": "create",
-			"type": "VM",
-			"code": self.code,
-			"options": self.options
-		}).read()
-
+	def before_create(self, data):
+		"""Create VM."""
+		data.update(type="VM", code=self.code, options=self.options)
+	
 	def run(self, code):
 		"""Execute JavaScript and return the result."""
-		return self.send({"action": "run", "code": code}).read()
+		return self.communicate({"action": "run", "code": code})
 		
 	def call(self, function_name, *args):
 		"""Call a function and return the result.
@@ -182,43 +269,41 @@ class VM(NodeBridge):
 			
 		So ``this`` keyword might doesn't work as expected.
 		"""
-		return self.send({
+		return self.communicate({
 			"action": "call",
 			"functionName": function_name,
 			"args": args
-		}).read()
+		})
 		
-class NodeVM(NodeBridge):
+class NodeVM(BaseVM):
 	"""NodeVM class, represent `vm2.NodeVM 
 	<https://github.com/patriksimek/vm2#nodevm>`_.
 	"""
-	def __init__(self, **options):
+	def __init__(self, server=None, **options):
 		"""Create NodeVM.
 		
+		:param VMServer server: Optional VMServer. See :meth:`BaseVM.__init__`
+			for details.
+			
 		:param options: the options for `vm2.NodeVM`_.
 		
 		If ``console="redirect"``, those console output will return as strings,
 		which can be access with :attr:`NodeVM.console_log` and
 		:attr:`NodeVM.console_error`.
 		"""
-		super().__init__()
+		super().__init__(server)
 		self.options = options
 		self.console = options.get("console", "inherit")
 		self.console_log = None
 		self.console_error = None
 		
-	def onconnect(self):
-		"""Create NodeVM on connect."""
-		self.send({
-			"action": "create",
-			"type": "NodeVM",
-			"options": self.options
-		}).read()
+	def before_create(self, data):
+		"""Create NodeVM."""
+		data.update(type="NodeVM", options=self.options)
 		
-	def onread(self, data):
-		"""Extend original method, extract ``data["console.log"]``,
-		``data["console.error"]`` to :attr:`NodeVM.console_log`,
-		:attr:`NodeVM.console_error`.
+	def after_read(self, data):
+		"""Extract ``data["console.log"]``, ``data["console.error"]`` to
+		:attr:`NodeVM.console_log`, :attr:`NodeVM.console_error`.
 		"""
 		if self.console == "inherit":
 			text = data.get("console.log")
@@ -232,29 +317,32 @@ class NodeVM(NodeBridge):
 		elif self.console == "redirect":
 			self.console_log = data.get("console.log")
 			self.console_error = data.get("console.error")
-			
-		super().onread(data)
 		
 	def run(self, code, filename=None):
-		"""Run the code and return a :class:`NodeVMModule`
+		"""Run the code and return a :class:`NodeVMModule`.
 		
-		:param str code: the code to be run. The code should work like a
+		:param str code: The code to be run. The code should work like a
 			commonjs module. See `vm2.NodeVM`_ for details.
 			
 		:param str filename: Optional, used for stack trace. Currently this
 			has no effect. (should vm-server send traceback back?)
+			
 		:return: :class:`NodeVMModule`.
 		"""
-		id = self.send({
+		id = self.communicate({
 			"action": "run",
 			"code": code,
 			"filename": filename
-		}).read()
+		})
 		return NodeVMModule(id, self)
 		
 	@classmethod
-	def code(cls, code, filename=None, **options):
+	def code(cls, code, filename=None, **kwargs):
 		"""A class method helping you create a module in VM.
+		
+		:param str code: The code sent to :meth:`run`.
+		:param str filename: The filename sent to :metho:`run`.
+		:param kwargs: Other arguments are sent to constructor.
 		
 		.. code-block:: python
 		
@@ -270,8 +358,8 @@ class NodeVM(NodeBridge):
 				result = module.call_member("method")
 				# access the vm with `module.vm`
 		"""
-		vm = cls(**options)
-		module = vm.connect().run(code, filename)
+		vm = cls(**kwargs)
+		module = vm.create().run(code, filename)
 		module.CLOSE_ON_EXIT = True
 		return module
 		
@@ -294,29 +382,34 @@ class NodeVMModule:
 		return self
 		
 	def __exit__(self, exc_type, exc_value, tracback):
-		"""Close the VM if:
+		"""Destroy the VM if:
 		
 		1. This method is called.
 		2. The module is created by :meth:`NodeVM.code`.
 		"""
 		if self.CLOSE_ON_EXIT:
-			self.vm.close()
+			self.vm.destroy()
+			
+	def communicate(self, data):
+		"""Wraps :meth:`vm.communicate`. So we can set additional properties
+		on the data before communication.
+		"""
+		data["moduleId"] = self.id
+		return self.vm.communicate(data)
 			
 	def call(self, *args):
 		"""Call the module, in case that the module itself is a function."""
-		return self.vm.send({
-			"id": self.id,
+		return self.communicate({
 			"action": "call",
 			"args": args
-		}).read()
+		})
 		
 	def get(self):
 		"""Return the module, in case that the module itself is json-encodable.
 		"""
-		return self.vm.send({
-			"id": self.id,
+		return self.communicate({
 			"action": "get"
-		}).read()
+		})
 		
 	def call_member(self, member, *args):
 		"""Call a function member.
@@ -324,35 +417,32 @@ class NodeVMModule:
 		:param str member: Member's name.
 		:param args: Function arguments.
 		"""
-		return self.vm.send({
-			"id": self.id,
+		return self.communicate({
 			"action": "callMember",
 			"member": member,
 			"args": args
-		}).read()
+		})
 		
 	def get_member(self, member):	
 		"""Return member value.
 		
 		:param str member: Member's name.
 		"""
-		return self.vm.send({
-			"id": self.id,
+		return self.communicate({
 			"action": "getMember",
 			"member": member
-		}).read()
+		})
 		
 	def destroy(self):
 		"""Destroy the module.
 		
-		You don't need this if you can just close the VM.
+		You don't need this if you can just destroy the VM.
 		"""
-		out = self.vm.send({
-			"id": self.id,
-			"action": "destroy"
-		}).read()
+		out = self.communicate({
+			"action": "destroyModule"
+		})
 		if self.CLOSE_ON_EXIT:
-			self.vm.close()
+			self.vm.destroy()
 		return out
 		
 class VMError(Exception):

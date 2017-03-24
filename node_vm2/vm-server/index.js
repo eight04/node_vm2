@@ -6,9 +6,10 @@ var readline = require("readline"),
 	vmList = collection();
 	
 rl.on("line", line => {
-	var result, err;
+	var result, err, input;
+	input = JSON.parse(line);
 	try {
-		result = processLine(line);
+		result = processLine(input);
 	} catch (_err) {
 		err = _err;
 	}
@@ -18,11 +19,11 @@ rl.on("line", line => {
 		result = result || {};
 		result.status = "success";
 	}
+	result.id = input.id;
 	console.log(JSON.stringify(result));
 });
 
 function processLine(input) {
-	input = JSON.parse(input);
 	switch (input.action) {
 		case "ping":
 			return;
