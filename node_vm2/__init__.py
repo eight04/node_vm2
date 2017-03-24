@@ -28,12 +28,11 @@ VM_SERVER = path.join(path.dirname(__file__), "vm-server")
 def eval(code, **options):
 	"""A shortcut to eval JavaScript.
 	
+	:param str code: The code to be run.
+	:param options: Additional options sent to :meth:`VM.__init__`.
+	
 	This function will create a :class:`VM`, run the code, and return the
 	result.
-	
-	Since each call to this function will create a VM, it is super slow if you
-	rapidly call it. Using :class:`VM` and :meth:`VM.run` is a better choice
-	in this case.
 	"""
 	with VM(**options) as vm:
 		return vm.run(code)
@@ -63,6 +62,7 @@ class VMServer:
 		self.poll_event = {}
 		self.read_lock = Lock()
 		self.write_lock = Lock()
+		self.poll_lock = Lock()
 		self.inc = 1
 		
 	def __enter__(self):
@@ -81,7 +81,7 @@ class VMServer:
 		.. code-block:: python
 		
 			with VMServer() as server:
-				# creaet VMs on the server...
+				# create VMs on the server...
 		"""
 		return self.start()
 		
@@ -123,12 +123,20 @@ class VMServer:
 		re-open."""
 		if self.closed:
 			return self
-		data = self.communicate({"action": "close"})
-		if data["status"] == "error":
-			raise VMError("Failed to close: " + data["error"])
+		try:
+			data = self.communicate({"action": "close"})
+			if data["status"] == "error":
+				raise VMError("Failed to close: " + data["error"])
+		except OSError:
+			# the process is down?
+			pass
 		self.process.communicate()
 		self.process = None
 		self.closed = True
+		
+		with self.poll_lock:
+			for event in self.poll_event.values():
+				event.set()
 		return self
 		
 	def generate_id(self):
@@ -141,39 +149,57 @@ class VMServer:
 		"""Send data to Node and return the response.
 		
 		:param dict data: must be json-encodable and follow vm-server's
-			protocol. An unique id is automatically set on data.
+			protocol. An unique id is automatically assigned to data.
 			
 		This method is thread-safe.
 		"""
 		id = self.generate_id()
+		
 		data["id"] = id
-		self.poll_data[id] = None
-		self.poll_event[id] = Event()
 		text = json.dumps(data) + "\n"
+		
+		event = Event()
+		
+		with self.poll_lock:
+			self.poll_data[id] = None
+			self.poll_event[id] = event
+			
 		# FIXME: do we really need lock for write?
 		with self.write_lock:
 			self.process.stdin.write(text.encode("utf-8"))
+			
 		def reader():
 			with self.read_lock:
 				data = self.process.stdout.readline()
-			data = json.loads(data.decode("utf-8"))
+			try:
+				data = json.loads(data.decode("utf-8"))
+			except json.JSONDecodeError:
+				# the server is down
+				self.close()
+				return
+				
 			self.poll_data[data["id"]] = data
 			self.poll_event[data["id"]].set()
+			
 		Thread(target=reader).start()
-		self.poll_event[id].wait()
-		data = self.poll_data[id]
-		del self.poll_data[id]
-		del self.poll_event[id]
+		
+		event.wait()
+		
+		with self.poll_lock:
+			data = self.poll_data[id]
+			del self.poll_data[id]
+			del self.poll_event[id]
 		return data
 	
 class BaseVM:
-	"""BaseVM class, containing some common method for VMs"""
+	"""BaseVM class, containing some common methods for VMs.
+	"""
 	def __init__(self, server=None):
 		"""Init the VM.
 		
 		:param VMServer server: Optional. If provided, the VM will be created
-			on the server. Otherwise, the VM will be created on a DEFAULT
-			server.
+			on the server. Otherwise, the VM will be created on a default
+			server, which is started on the first creation of VMs.
 		"""
 		if server is None:
 			server = default_bridge()
@@ -250,7 +276,10 @@ class VM(BaseVM):
 		data.update(type="VM", code=self.code, options=self.options)
 	
 	def run(self, code):
-		"""Execute JavaScript and return the result."""
+		"""Execute JavaScript and return the result.
+		
+		If the server responses an error, an :class:`VMError` will be raised.
+		"""
 		return self.communicate({"action": "run", "code": code})
 		
 	def call(self, function_name, *args):
@@ -259,8 +288,8 @@ class VM(BaseVM):
 		:param str function_name: The function to call.
 		:param args: Function arguments.
 		
-		function_name can include "." to call function on object. However, it 
-		is called like
+		function_name can include "." to call functions on an object. However,
+		it is called like:
 		
 		.. code-block:: javascript
 		
@@ -341,8 +370,8 @@ class NodeVM(BaseVM):
 		"""A class method helping you create a module in VM.
 		
 		:param str code: The code sent to :meth:`run`.
-		:param str filename: The filename sent to :metho:`run`.
-		:param kwargs: Other arguments are sent to constructor.
+		:param str filename: The filename sent to :meth:`run`.
+		:param kwargs: Other arguments are sent to :meth:`NodeVM.__init__`.
 		
 		.. code-block:: python
 		
