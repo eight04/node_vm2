@@ -114,6 +114,13 @@ http://node-vm2.readthedocs.io/
 Changelog
 ---------
 
+-  0.2.0 (Mar 25, 2017)
+
+   -  **Drop NodeBridge.**
+   -  Add VMServer.
+   -  **Make all VMs share a default VMServer.**
+   -  **Method rename: VM.connect -> VM.create, VM.close -> VM.destroy.**
+
 -  0.1.0 (Mar 23, 2017)
 
    -  First release
