@@ -95,7 +95,7 @@ It is possible to do async task with Promise:
       print(module.call_member("test"))
       print(datetime.now())
       
-If you don't like to use the default server:
+If you like to allow the VM to crash your server (e.g. ``process.exit()``), you should create the VM in a separate server so it won't affect other VMs:
 
 .. code-block:: python
 
@@ -103,7 +103,7 @@ If you don't like to use the default server:
 
    with VMServer() as server:
       with VM(server=server) as vm:
-         # now the vm is created in your new server
+         # now the vm is created in a new server
          print(vm.run("1 + 2 + 3"))
 
 API reference
