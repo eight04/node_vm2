@@ -20,7 +20,19 @@ rl.on("line", line => {
 		result.status = "success";
 	}
 	result.id = input.id;
-	console.log(JSON.stringify(result));
+	if (result.value && typeof result.value.then == "function") {
+		// async code
+		result.value.then(value => {
+			result.value = value;
+			console.log(JSON.stringify(result));
+		}, error => {
+			result.status = "error";
+			result.error = error.message;
+			console.log(JSON.stringify(result));
+		});
+	} else {
+		console.log(JSON.stringify(result));
+	}
 });
 
 function processLine(input) {
