@@ -4,12 +4,11 @@ from xcute import cute, Exc, Bump
 
 cute(
 	pkg_name = "node_vm2",
-	test = [
+	lint = [
 		'eslint **/*.js --ignore-path .gitignore',
-		'pylint {pkg_name}',
-		'python test.py',
-		'readme_build'
+		'pylint {pkg_name}'
 	],
+	test = ['lint', 'python test.py', 'readme_build'],
 	bump_pre = 'test',
 	bump_post = ['dist', 'release', 'publish', 'install'],
 	dist = 'python setup.py sdist bdist_wheel',

@@ -42,18 +42,70 @@ Usage
 
 Most of the APIs are bound to `vm2 <https://github.com/patriksimek/vm2>`__.
 
+Simple eval:
+
+.. code-block:: python
+
+   from node_vm2 import eval
+   
+   print(eval("['foo', 'bar'].join()"))
+   
+Use VM:
+
 .. code-block:: python
 
    from node_vm2 import VM
    
    with VM() as vm:
-      result = vm.run("""
+      vm.run("""
          var sum = 0, i;
          for (i = 0; i < 10; i++) sum += i;
-         sum;
       """)
-      print(result)
+      print(vm.run("sum"))
       
+Use NodeVM:
+
+.. code-block:: python
+
+   from node_vm2 import NodeVM
+   
+   js = """exports.greet = name => console.log(`Hello ${name}!`);"""
+   
+   with NodeVM.code(js) as module:
+      module.call_member("greet", "John")
+      
+It is possible to do async task with Promise:
+
+.. code-block:: python
+
+   from datetime import datetime
+   from node_vm2 import NodeVM
+
+   js = """
+   exports.test = () => {
+      return new Promise(resolve => {
+         setTimeout(() => {
+            resolve("hello")
+         }, 3000);
+      });
+   };
+   """
+   with NodeVM.code(js) as module:
+      print(datetime.now())
+      print(module.call_member("test"))
+      print(datetime.now())
+      
+If you like to allow the VM to crash your server (e.g. ``process.exit()``), you should create the VM in a separate server so it won't affect other VMs:
+
+.. code-block:: python
+
+   from node_vm2 import VMServer, VM
+
+   with VMServer() as server:
+      with VM(server=server) as vm:
+         # now the vm is created in a new server
+         print(vm.run("1 + 2 + 3"))
+
 API reference
 -------------
 

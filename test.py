@@ -18,9 +18,9 @@ class Main(TestCase):
 			
 	def test_VM(self):
 		with self.subTest("create VM"):
-			vm = VM().connect()
+			vm = VM().create()
 			r = vm.run("'foo' + 'bar'")
-			vm.close()
+			vm.destroy()
 			self.assertEqual(r, "foobar")
 			
 		with self.subTest("with statement"):
@@ -30,11 +30,11 @@ class Main(TestCase):
 				
 	def test_NodeVM(self):
 		with self.subTest("create NodeVM"):
-			vm = NodeVM().connect()
+			vm = NodeVM().create()
 			m = vm.run("exports.foo = 'foo'")
 			r = m.get_member("foo")
 			self.assertEqual(r, "foo")
-			vm.close()
+			vm.destroy()
 			
 		with self.subTest("with statement"):
 			with NodeVM() as vm:

@@ -3,12 +3,13 @@ var readline = require("readline"),
 	rl = readline.createInterface({
 		input: process.stdin
 	}),
-	vm;
+	vmList = collection();
 	
 rl.on("line", line => {
-	var result, err;
+	var result, err, input;
+	input = JSON.parse(line);
 	try {
-		result = processLine(line);
+		result = processLine(input);
 	} catch (_err) {
 		err = _err;
 	}
@@ -18,24 +19,40 @@ rl.on("line", line => {
 		result = result || {};
 		result.status = "success";
 	}
-	console.log(JSON.stringify(result));
+	result.id = input.id;
+	if (result.value && typeof result.value.then == "function") {
+		// async code
+		result.value.then(value => {
+			result.value = value;
+			console.log(JSON.stringify(result));
+		}, error => {
+			result.status = "error";
+			result.error = error.message;
+			console.log(JSON.stringify(result));
+		});
+	} else {
+		console.log(JSON.stringify(result));
+	}
 });
 
 function processLine(input) {
-	input = JSON.parse(input);
 	switch (input.action) {
-		case "create":
-			return createVM(input);
+		case "ping":
+			return;
 			
 		case "close":
 			setImmediate(() => rl.close());
-			return destroyVM();
+			return;
+			
+		case "create":
+			return createVM(input);
+			
+		case "destroy":
+			return destroyVM(input);
 			
 		default:
-			if (!vm) {
-				throw new Error("VM is not actived");
-			}
-			if (!vm.hasOwnProperty(input.action)) {
+			var vm = vmList.get(input.vmId);
+			if (!vm[input.action]) {
 				throw new Error("Unknown action: " + input.action);
 			}
 			return vm[input.action](input);
@@ -55,13 +72,16 @@ function createVM(input) {
 	}
 }
 
-function destroyVM() {
-	vm = null;
+function destroyVM(input) {
+	vmList.remove(input.vmId);
 }
 
 function createNormalVM(input) {
 	var _vm = new vm2.VM(input.options);
-	vm = {
+	if (input.code) {
+		_vm.run(input.code);
+	}
+	var vm = {
 		run({code}) {
 			return {
 				value: _vm.run(code)
@@ -73,9 +93,9 @@ function createNormalVM(input) {
 			};
 		}
 	};
-	if (input.code) {
-		_vm.run(input.code);
-	}
+	return {
+		value: vmList.add(vm)
+	};
 }
 
 function createNodeVM(input) {
@@ -88,30 +108,28 @@ function createNodeVM(input) {
 		input.options.console = "redirect";
 	}
 	var _vm = new vm2.NodeVM(input.options),
-		modules = {},
-		_id = 1;
+		modules = collection();
 	if (console) {
 		console.register(_vm);
 	}
-	vm = {
+	var vm = {
 		run({code, filename}) {
-			modules[_id] = _vm.run(code, filename);
-			return _id++;
+			return modules.add(_vm.run(code, filename));
 		},
-		get({id}) {
-			return modules[id];
+		get({moduleId}) {
+			return modules.get(moduleId);
 		},
-		call({id, args = []}) {
-			return modules[id](...args);
+		call({moduleId, args = []}) {
+			return modules.get(moduleId)(...args);
 		},
-		getMember({id, member}) {
-			return modules[id][member];
+		getMember({moduleId, member}) {
+			return modules.get(moduleId)[member];
 		},
-		callMember({id, member, args = []}) {
-			return modules[id][member](...args);
+		callMember({moduleId, member, args = []}) {
+			return modules.get(moduleId)[member](...args);
 		},
-		destroy({id}) {
-			delete modules[id];
+		destroyModule({moduleId}) {
+			modules.remove(moduleId);
 		}
 	};
 	for (const [key, fn] of Object.entries(vm)) {
@@ -125,6 +143,9 @@ function createNodeVM(input) {
 			return result;
 		};
 	}
+	return {
+		value: vmList.add(vm)
+	};
 }
 
 function nodeVmConsole(type = "inherit") {
@@ -149,5 +170,31 @@ function nodeVmConsole(type = "inherit") {
 			});
 		},
 		type
+	};
+}
+
+function collection() {
+	var inc = 1,
+		hold = Object.create(null);
+	return {
+		add(item) {
+			hold[inc] = item;
+			return inc++;
+		},
+		remove(id) {
+			if (!(id in hold)) {
+				throw new Error("Index doesn't exist: " + id);
+			}
+			delete hold[id];
+		},
+		get(id) {
+			if (!(id in hold)) {
+				throw new Error("Index doesn't exist: " + id);
+			}
+			return hold[id];
+		},
+		has(id) {
+			return id in hold;
+		}
 	};
 }
