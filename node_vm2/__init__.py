@@ -53,144 +53,6 @@ def close():
 	if DEFAULT_BRIDGE is not None:
 		DEFAULT_BRIDGE.close()
 		
-class VMServer:
-	"""VMServer class, represent vm-server. See :meth:`start` for details."""
-	def __init__(self):
-		self.closed = None
-		self.process = None
-		self.poll_data = {}
-		self.poll_event = {}
-		self.read_lock = Lock()
-		self.write_lock = Lock()
-		self.poll_lock = Lock()
-		self.inc = 1
-		
-	def __enter__(self):
-		"""This class can be used as a context manager, which automatically
-		:meth:`start` the server.
-		
-		.. code-block:: python
-		
-			server = VMServer()
-			server.start()
-			# create VMs on the server...
-			server.close()
-			
-		vs.
-		
-		.. code-block:: python
-		
-			with VMServer() as server:
-				# create VMs on the server...
-		"""
-		return self.start()
-		
-	def __exit__(self, exc_type, exc_value, traceback):
-		"""See :meth:`close`."""
-		self.close()
-		
-	def start(self):
-		"""Spawn a Node.js subprocess and run vm-server.
-		
-		vm-server is a REPL server, which allows us to connect to it with
-		stdios. You can find the script at ``node_vm2/vm-server`` (`Github
-		<https://github.com/eight04/node_vm2/tree/master/node_vm2/vm-server>`__).
-		
-		Communication using JSON::
-		
-			> {"id": 1, "action": "create", "type": "VM"}
-			{"id": 1, "status": "success"}
-			
-			> {"id": 2, "action": "run", "code": "var a = 0; a += 10; a"}
-			{"id": 2, "status": "success", "value": 10}
-			
-			> {"id": 3, "action": "xxx"}
-			{"id": 3, "status": "error", "error": "Unknown action: xxx"}
-		"""
-		if self.closed:
-			raise VMError("The VM is closed")
-			
-		args = [NODE_EXECUTABLE, VM_SERVER]
-		self.process = Popen(args, bufsize=0, stdin=PIPE, stdout=PIPE)
-		data = self.communicate({"action": "ping"})
-		if data["status"] == "error":
-			raise VMError("Failed to start: " + data["error"])
-		self.closed = False
-		return self
-
-	def close(self):
-		"""Close the server. Once the server is closed, it can't be 
-		re-open."""
-		if self.closed:
-			return self
-		try:
-			data = self.communicate({"action": "close"})
-			if data["status"] == "error":
-				raise VMError("Failed to close: " + data["error"])
-		except OSError:
-			# the process is down?
-			pass
-		self.process.communicate()
-		self.process = None
-		self.closed = True
-		
-		with self.poll_lock:
-			for event in self.poll_event.values():
-				event.set()
-		return self
-		
-	def generate_id(self):
-		"""Generate unique id for each communication."""
-		inc = self.inc
-		self.inc += 1
-		return inc
-		
-	def communicate(self, data):
-		"""Send data to Node and return the response.
-		
-		:param dict data: must be json-encodable and follow vm-server's
-			protocol. An unique id is automatically assigned to data.
-			
-		This method is thread-safe.
-		"""
-		id = self.generate_id()
-		
-		data["id"] = id
-		text = json.dumps(data) + "\n"
-		
-		event = Event()
-		
-		with self.poll_lock:
-			self.poll_data[id] = None
-			self.poll_event[id] = event
-			
-		# FIXME: do we really need lock for write?
-		with self.write_lock:
-			self.process.stdin.write(text.encode("utf-8"))
-			
-		def reader():
-			with self.read_lock:
-				data = self.process.stdout.readline()
-			try:
-				data = json.loads(data.decode("utf-8"))
-			except json.JSONDecodeError:
-				# the server is down
-				self.close()
-				return
-				
-			self.poll_data[data["id"]] = data
-			self.poll_event[data["id"]].set()
-			
-		Thread(target=reader).start()
-		
-		event.wait()
-		
-		with self.poll_lock:
-			data = self.poll_data[id]
-			del self.poll_data[id]
-			del self.poll_event[id]
-		return data
-	
 class BaseVM:
 	"""BaseVM class, containing some common methods for VMs.
 	"""
@@ -278,7 +140,7 @@ class VM(BaseVM):
 	def run(self, code):
 		"""Execute JavaScript and return the result.
 		
-		If the server responses an error, an :class:`VMError` will be raised.
+		If the server responses an error, a :class:`VMError` will be raised.
 		"""
 		return self.communicate({"action": "run", "code": code})
 		
@@ -474,6 +336,144 @@ class NodeVMModule:
 			self.vm.destroy()
 		return out
 		
+class VMServer:
+	"""VMServer class, represent vm-server. See :meth:`start` for details."""
+	def __init__(self):
+		self.closed = None
+		self.process = None
+		self.poll_data = {}
+		self.poll_event = {}
+		self.read_lock = Lock()
+		self.write_lock = Lock()
+		self.poll_lock = Lock()
+		self.inc = 1
+		
+	def __enter__(self):
+		"""This class can be used as a context manager, which automatically
+		:meth:`start` the server.
+		
+		.. code-block:: python
+		
+			server = VMServer()
+			server.start()
+			# create VMs on the server...
+			server.close()
+			
+		vs.
+		
+		.. code-block:: python
+		
+			with VMServer() as server:
+				# create VMs on the server...
+		"""
+		return self.start()
+		
+	def __exit__(self, exc_type, exc_value, traceback):
+		"""See :meth:`close`."""
+		self.close()
+		
+	def start(self):
+		"""Spawn a Node.js subprocess and run vm-server.
+		
+		vm-server is a REPL server, which allows us to connect to it with
+		stdios. You can find the script at ``node_vm2/vm-server`` (`Github
+		<https://github.com/eight04/node_vm2/tree/master/node_vm2/vm-server>`__).
+		
+		Communication using JSON::
+		
+			> {"id": 1, "action": "create", "type": "VM"}
+			{"id": 1, "status": "success"}
+			
+			> {"id": 2, "action": "run", "code": "var a = 0; a += 10; a"}
+			{"id": 2, "status": "success", "value": 10}
+			
+			> {"id": 3, "action": "xxx"}
+			{"id": 3, "status": "error", "error": "Unknown action: xxx"}
+		"""
+		if self.closed:
+			raise VMError("The VM is closed")
+			
+		args = [NODE_EXECUTABLE, VM_SERVER]
+		self.process = Popen(args, bufsize=0, stdin=PIPE, stdout=PIPE)
+		data = self.communicate({"action": "ping"})
+		if data["status"] == "error":
+			raise VMError("Failed to start: " + data["error"])
+		self.closed = False
+		return self
+
+	def close(self):
+		"""Close the server. Once the server is closed, it can't be 
+		re-open."""
+		if self.closed:
+			return self
+		try:
+			data = self.communicate({"action": "close"})
+			if data["status"] == "error":
+				raise VMError("Failed to close: " + data["error"])
+		except OSError:
+			# the process is down?
+			pass
+		self.process.communicate()
+		self.process = None
+		self.closed = True
+		
+		with self.poll_lock:
+			for event in self.poll_event.values():
+				event.set()
+		return self
+		
+	def generate_id(self):
+		"""Generate unique id for each communication."""
+		inc = self.inc
+		self.inc += 1
+		return inc
+		
+	def communicate(self, data):
+		"""Send data to Node and return the response.
+		
+		:param dict data: must be json-encodable and follow vm-server's
+			protocol. An unique id is automatically assigned to data.
+			
+		This method is thread-safe.
+		"""
+		id = self.generate_id()
+		
+		data["id"] = id
+		text = json.dumps(data) + "\n"
+		
+		event = Event()
+		
+		with self.poll_lock:
+			self.poll_data[id] = None
+			self.poll_event[id] = event
+			
+		# FIXME: do we really need lock for write?
+		with self.write_lock:
+			self.process.stdin.write(text.encode("utf-8"))
+			
+		def reader():
+			with self.read_lock:
+				data = self.process.stdout.readline()
+			try:
+				data = json.loads(data.decode("utf-8"))
+			except json.JSONDecodeError:
+				# the server is down
+				self.close()
+				return
+				
+			self.poll_data[data["id"]] = data
+			self.poll_event[data["id"]].set()
+			
+		Thread(target=reader).start()
+		
+		event.wait()
+		
+		with self.poll_lock:
+			data = self.poll_data[id]
+			del self.poll_data[id]
+			del self.poll_event[id]
+		return data
+	
 class VMError(Exception):
 	"""Errors thrown by VM."""
 	pass
