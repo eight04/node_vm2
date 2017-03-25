@@ -103,45 +103,44 @@ function createNodeVM(input) {
 	if (!input.options) {
 		input.options = {};
 	}
-	var console = input.options.console || "inherit";
-	if (console != "off") {
+	var _console = input.options.console || "inherit";
+	if (_console != "off") {
 		input.options.console = "redirect";
 	}
 	var _vm = new vm2.NodeVM(input.options),
 		modules = collection();
 	var vm = {
 		run({code, filename}) {
-			return modules.add(_vm.run(code, filename));
+			return {
+				value: modules.add(_vm.run(code, filename))
+			};
 		},
 		get({moduleId}) {
-			return modules.get(moduleId);
+			return {
+				value: modules.get(moduleId)
+			};
 		},
 		call({moduleId, args = []}) {
-			return modules.get(moduleId)(...args);
+			return {
+				value: modules.get(moduleId)(...args)
+			};
 		},
 		getMember({moduleId, member}) {
-			return modules.get(moduleId)[member];
+			return {
+				value: modules.get(moduleId)[member]
+			};
 		},
 		callMember({moduleId, member, args = []}) {
-			return modules.get(moduleId)[member](...args);
+			return {
+				value: modules.get(moduleId)[member](...args)
+			};
 		},
 		destroyModule({moduleId}) {
 			modules.remove(moduleId);
 		}
 	};
-	for (const [key, fn] of Object.entries(vm)) {
-		vm[key] = input => {
-			var result = {
-				value: fn(input)
-			};
-			if (console) {
-				return console.assign(result);
-			}
-			return result;
-		};
-	}
 	var id = vmList.add(vm);
-	if (console != "off") {
+	if (_console != "off") {
 		_vm.on("console.log", (...args) => {
 			var event = {
 				vmId: id,
