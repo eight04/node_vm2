@@ -20,6 +20,7 @@ rl.on("line", line => {
 		result.status = "success";
 	}
 	result.id = input.id;
+	result.type = "response";
 	if (result.value && typeof result.value.then == "function") {
 		// async code
 		result.value.then(value => {
@@ -102,16 +103,12 @@ function createNodeVM(input) {
 	if (!input.options) {
 		input.options = {};
 	}
-	var console;
-	if (input.options.console != "off") {
-		console = nodeVmConsole(input.options.console);
+	var console = input.options.console || "inherit";
+	if (console != "off") {
 		input.options.console = "redirect";
 	}
 	var _vm = new vm2.NodeVM(input.options),
 		modules = collection();
-	if (console) {
-		console.register(_vm);
-	}
 	var vm = {
 		run({code, filename}) {
 			return modules.add(_vm.run(code, filename));
@@ -143,33 +140,29 @@ function createNodeVM(input) {
 			return result;
 		};
 	}
+	var id = vmList.add(vm);
+	if (console != "off") {
+		_vm.on("console.log", (...args) => {
+			var event = {
+				vmId: id,
+				type: "event",
+				name: "console.log",
+				value: args.join(" ")
+			};
+			console.log(JSON.stringify(event));
+		});
+		_vm.on("console.error", (...args) => {
+			var event = {
+				vmId: id,
+				type: "event",
+				name: "console.log",
+				value: args.join(" ")
+			};
+			console.log(JSON.stringify(event));
+		});
+	}
 	return {
-		value: vmList.add(vm)
-	};
-}
-
-function nodeVmConsole(type = "inherit") {
-	var data = {
-		log: "",
-		error: ""
-	};
-	return {
-		assign(o) {
-			o["console.log"] = data.log;
-			o["console.error"] = data.error;
-			data.log = "";
-			data.error = "";
-			return o;
-		},
-		register(vm) {
-			vm.on("console.log", (...args) => {
-				data.log += args.join(" ") + "\n";
-			});
-			vm.on("console.error", (...args) => {
-				data.error += args.join(" ") + "\n";
-			});
-		},
-		type
+		value: id
 	};
 }
 
