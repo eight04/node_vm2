@@ -14,9 +14,9 @@ There are 2 ways to specify ``node`` executable:
 
 import atexit
 import json
+from queue import Queue
 import sys
 from threading import Thread, Event, Lock
-
 from subprocess import Popen, PIPE
 from os import path, environ
 
@@ -67,6 +67,8 @@ class BaseVM:
 			server = default_bridge()
 		self.bridge = server
 		self.id = None
+		self.event_que = None
+		self.console = "off"
 		
 	def __enter__(self):
 		"""This class can be used as a context manager, which automatically
@@ -88,11 +90,13 @@ class BaseVM:
 		data = {"action": "create"}
 		self.before_create(data)
 		self.id = self.communicate(data)
+		self.bridge.add_vm(self)
 		return self
 		
 	def destroy(self):
 		"""Destroy the VM."""
 		self.communicate({"action": "destroy"})
+		self.bridge.remove_vm(self)
 		self.id = None
 		return self
 		
@@ -105,15 +109,10 @@ class BaseVM:
 		"""
 		data["vmId"] = self.id
 		data = self.bridge.communicate(data)
-		self.after_read(data)
 		if data["status"] != "success":
 			raise VMError(data["error"])
 		return data.get("value")
 		
-	def after_read(self, data):
-		"""Overwrite. Extract data after read."""
-		pass
-
 class VM(BaseVM):
 	"""VM class, represent `vm2.VM <https://github.com/patriksimek/vm2#vm>`_.
 	"""
@@ -185,29 +184,11 @@ class NodeVM(BaseVM):
 		super().__init__(server)
 		self.options = options
 		self.console = options.get("console", "inherit")
-		self.console_log = None
-		self.console_error = None
+		self.event_que = Queue()
 		
 	def before_create(self, data):
 		"""Create NodeVM."""
 		data.update(type="NodeVM", options=self.options)
-		
-	def after_read(self, data):
-		"""Extract ``data["console.log"]``, ``data["console.error"]`` to
-		:attr:`NodeVM.console_log`, :attr:`NodeVM.console_error`.
-		"""
-		if self.console == "inherit":
-			text = data.get("console.log")
-			if text is not None:
-				sys.stdout.write(text)
-				
-			text = data.get("console.error")
-			if text is not None:
-				sys.stderr.write(text)
-				
-		elif self.console == "redirect":
-			self.console_log = data.get("console.log")
-			self.console_error = data.get("console.error")
 		
 	def run(self, code, filename=None):
 		"""Run the code and return a :class:`NodeVMModule`.
@@ -341,9 +322,8 @@ class VMServer:
 	def __init__(self):
 		self.closed = None
 		self.process = None
-		self.poll_data = {}
-		self.poll_event = {}
-		self.read_lock = Lock()
+		self.vms = {}
+		self.poll = {}
 		self.write_lock = Lock()
 		self.poll_lock = Lock()
 		self.inc = 1
@@ -395,6 +375,45 @@ class VMServer:
 			
 		args = [NODE_EXECUTABLE, VM_SERVER]
 		self.process = Popen(args, bufsize=0, stdin=PIPE, stdout=PIPE)
+		
+		def reader():
+			for data in self.process.stdout:
+				try:
+					# FIXME: https://github.com/PyCQA/pylint/issues/922
+					data = json.loads(data.decode("utf-8")) or {}
+				except json.JSONDecodeError:
+					# the server is down?
+					self.close()
+					return
+					
+				if data["type"] == "response":
+					with self.poll_lock:
+						self.poll[data["id"]][1] = data
+						self.poll[data["id"]][0].set()
+					
+				elif data["type"] == "event":
+					try:
+						vm = self.vms[data["vmId"]]
+					except KeyError:
+						# the vm is destroyed
+						continue
+						
+					if data["name"] == "console.log":
+						if vm.console == "redirect":
+							vm.event_que.put(data)
+							
+						elif vm.console == "inherit":
+							sys.stdout.write(data.get("value", ""))
+							
+					elif data["name"] == "console.error":
+						if vm.console == "redirect":
+							vm.event_que.put(data)
+						
+						elif vm.console == "inherit":
+							sys.stderr.write(data.get("value", ""))
+			
+		Thread(target=reader, daemon=True).start()
+		
 		data = self.communicate({"action": "ping"})
 		if data["status"] == "error":
 			raise VMError("Failed to start: " + data["error"])
@@ -418,9 +437,15 @@ class VMServer:
 		self.closed = True
 		
 		with self.poll_lock:
-			for event in self.poll_event.values():
+			for event, _data in self.poll.values():
 				event.set()
 		return self
+		
+	def add_vm(self, vm):
+		self.vms[vm.id] = vm
+		
+	def remove_vm(self, vm):
+		del self.vms[vm.id]
 		
 	def generate_id(self):
 		"""Generate unique id for each communication."""
@@ -444,34 +469,17 @@ class VMServer:
 		event = Event()
 		
 		with self.poll_lock:
-			self.poll_data[id] = None
-			self.poll_event[id] = event
+			self.poll[id] = [event, None]
 			
 		# FIXME: do we really need lock for write?
 		with self.write_lock:
 			self.process.stdin.write(text.encode("utf-8"))
 			
-		def reader():
-			with self.read_lock:
-				data = self.process.stdout.readline()
-			try:
-				data = json.loads(data.decode("utf-8"))
-			except json.JSONDecodeError:
-				# the server is down
-				self.close()
-				return
-				
-			self.poll_data[data["id"]] = data
-			self.poll_event[data["id"]].set()
-			
-		Thread(target=reader).start()
-		
 		event.wait()
 		
 		with self.poll_lock:
-			data = self.poll_data[id]
-			del self.poll_data[id]
-			del self.poll_event[id]
+			data = self.poll[id][1]
+			del self.poll[id]
 		return data
 	
 class VMError(Exception):
