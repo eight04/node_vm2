@@ -114,6 +114,11 @@ http://node-vm2.readthedocs.io/
 Changelog
 ---------
 
+-  0.3.0 (Apr 23, 2017)
+
+   -  **Change: use event queue to handle console redirects.**
+   -  Reconize object thrown by VM which doesn't inherit built-in Error.
+
 -  0.2.0 (Mar 25, 2017)
 
    -  **Drop NodeBridge.**
