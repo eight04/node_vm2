@@ -1,17 +1,5 @@
 #! python3
 
-"""
-node_vm2
-========
-
-A Python 3 to Node.js + vm2 binding, helps you execute JavaScript safely.
-
-There are 2 ways to specify ``node`` executable:
-
-1. Add the directory of ``node`` to ``PATH`` env variable.
-2. Set env variable ``NODE_EXECUTABLE`` to the path of the executable.
-"""
-
 import atexit
 import json
 from queue import Queue
@@ -57,8 +45,7 @@ class BaseVM:
 	"""BaseVM class, containing some common methods for VMs.
 	"""
 	def __init__(self, server=None):
-		"""Init the VM.
-		
+		"""
 		:param VMServer server: Optional. If provided, the VM will be created
 			on the server. Otherwise, the VM will be created on a default
 			server, which is started on the first creation of VMs.
@@ -117,12 +104,11 @@ class VM(BaseVM):
 	"""VM class, represent `vm2.VM <https://github.com/patriksimek/vm2#vm>`_.
 	"""
 	def __init__(self, code=None, server=None, **options):
-		"""Create VM
-		
+		"""
 		:param str code: Optional JavaScript code to run after creating
 			the VM. Useful to define some functions.
 			
-		:param VMServer server: Optional VMServer. See :meth:`BaseVM.__init__`
+		:param VMServer server: Optional VMServer. See :class:`BaseVM`
 			for details.
 			
 		:param options: The options for `vm2.VM`_.
@@ -170,21 +156,31 @@ class NodeVM(BaseVM):
 	<https://github.com/patriksimek/vm2#nodevm>`_.
 	"""
 	def __init__(self, server=None, **options):
-		"""Create NodeVM.
-		
-		:param VMServer server: Optional VMServer. See :meth:`BaseVM.__init__`
+		"""
+		:param VMServer server: Optional VMServer. See :class:`BaseVM`
 			for details.
 			
 		:param options: the options for `vm2.NodeVM`_.
 		
-		If ``console="redirect"``, those console output will return as strings,
-		which can be access with :attr:`NodeVM.console_log` and
-		:attr:`NodeVM.console_error`.
+		If ``console="redirect"``, those console output will return as events,
+		stored in an event queue, which could be accessed with
+		:attr:`event_que`.
 		"""
 		super().__init__(server)
 		self.options = options
 		self.console = options.get("console", "inherit")
+		
 		self.event_que = Queue()
+		"""A :class:`queue.Queue` object containing console events.
+		
+		An event is a :class:`dict` and you can get the text value with:
+		
+		.. code:: python
+		
+			event = self.event_que.get()
+			text = event.get("value")
+		
+		"""
 		
 	def before_create(self, data):
 		"""Create NodeVM."""
@@ -193,8 +189,9 @@ class NodeVM(BaseVM):
 	def run(self, code, filename=None):
 		"""Run the code and return a :class:`NodeVMModule`.
 		
-		:param str code: The code to be run. The code should work like a
-			commonjs module. See `vm2.NodeVM`_ for details.
+		:param str code: The code to be run. The code should look like a
+			commonjs module (or an IIFE module, according to the options). See
+			`vm2.NodeVM`_ for details.
 			
 		:param str filename: Optional, used for stack trace. Currently this
 			has no effect. (should vm-server send traceback back?)
@@ -214,7 +211,7 @@ class NodeVM(BaseVM):
 		
 		:param str code: The code sent to :meth:`run`.
 		:param str filename: The filename sent to :meth:`run`.
-		:param kwargs: Other arguments are sent to :meth:`NodeVM.__init__`.
+		:param kwargs: Other arguments are sent to constructor.
 		
 		.. code-block:: python
 		
@@ -358,6 +355,11 @@ class VMServer:
 		vm-server is a REPL server, which allows us to connect to it with
 		stdios. You can find the script at ``node_vm2/vm-server`` (`Github
 		<https://github.com/eight04/node_vm2/tree/master/node_vm2/vm-server>`__).
+		
+		There are 2 ways to specify ``node`` executable:
+
+			1. Add the directory of ``node`` to ``PATH`` env variable.
+			2. Set env variable ``NODE_EXECUTABLE`` to the path of the executable.
 		
 		Communication using JSON::
 		

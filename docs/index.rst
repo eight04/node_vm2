@@ -1,5 +1,38 @@
 .. automodule:: node_vm2
    :show-inheritance:
-   :members:
-   :special-members: __init__, __enter__, __exit__
-   :exclude-members: send, read, onconnect, onread, generate_id, before_create, after_read, communicate
+
+   node_vm2
+   ========
+
+   A Python 3 to Node.js + vm2 binding, helps you execute JavaScript safely.
+   
+   Also checkout `node_vm2's readme <https://github.com/eight04/node_vm2>`_.
+   
+   Functions
+   ---------
+   
+   .. autofunction:: eval
+   
+   Classes
+   -------
+   
+   .. autoclass:: BaseVM
+      :members: __enter__, __exit__, create, destroy
+   
+   .. autoclass:: VM
+      :members: run, call
+   
+   .. autoclass:: NodeVM
+      
+      .. autoinstanceattribute:: event_que
+         :annotation: = queue.Queue()
+         
+      .. automethod:: run
+      .. automethod:: code
+   
+   .. autoclass:: NodeVMModule
+      :members: __enter__, __exit__, call, get, call_member, get_member, destroy
+   
+   .. autoclass:: VMServer
+      :members: __enter__, __exit__, start, close
+   
