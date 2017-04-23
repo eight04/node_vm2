@@ -403,14 +403,14 @@ class VMServer:
 							vm.event_que.put(data)
 							
 						elif vm.console == "inherit":
-							sys.stdout.write(data.get("value", ""))
+							sys.stdout.write(data.get("value", "") + "\n")
 							
 					elif data["name"] == "console.error":
 						if vm.console == "redirect":
 							vm.event_que.put(data)
 						
 						elif vm.console == "inherit":
-							sys.stderr.write(data.get("value", ""))
+							sys.stderr.write(data.get("value", "") + "\n")
 			
 		Thread(target=reader, daemon=True).start()
 		
