@@ -14,7 +14,7 @@ rl.on("line", line => {
 		err = _err;
 	}
 	if (err) {
-		result = {status: "error", error: err.message};
+		result = {status: "error", error: err.message || err};
 	} else {
 		result = result || {};
 		result.status = "success";
@@ -28,7 +28,7 @@ rl.on("line", line => {
 			console.log(JSON.stringify(result));
 		}, error => {
 			result.status = "error";
-			result.error = error.message;
+			result.error = error.message || error;
 			console.log(JSON.stringify(result));
 		});
 	} else {
