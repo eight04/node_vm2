@@ -1,6 +1,8 @@
 #! python3
 
+from io import StringIO
 from unittest import TestCase, main
+from unittest.mock import patch
 from node_vm2 import eval, VM, NodeVM, VMError
 
 class Main(TestCase):
@@ -51,4 +53,21 @@ class Main(TestCase):
 		with self.assertRaisesRegex(VMError, "foo"):
 			eval("throw new Error('foo')")
 
+		# doesn't inherit Error
+		with self.assertRaisesRegex(VMError, "foo"):
+			eval("throw 'foo'");
+			
+	def test_console(self):
+		code = "exports.test = s => console.log(s)"
+		with NodeVM.code(code) as module:
+			with patch("sys.stdout", new=StringIO()) as out:
+				module.call_member("test", "Hello")
+				self.assertEqual(out.getvalue(), "Hello\n")
+				
+		# redirect and event
+		with NodeVM.code(code, console="redirect") as module:
+			module.call_member("test", "Hello")
+			event = module.vm.event_que.get_nowait()
+			self.assertEqual(event["value"], "Hello")
+			
 main()
