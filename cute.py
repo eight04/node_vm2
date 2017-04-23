@@ -1,6 +1,6 @@
 #! python3
 
-from xcute import cute, Exc, Bump
+from xcute import cute, exc
 
 cute(
 	pkg_name = "node_vm2",
@@ -29,7 +29,7 @@ cute(
 		'rst2html --no-raw --exit-status=1 --verbose '
 			'build/long-description.rst build/long-description.html'
 	],
-	readme_build_err = ['readme_show', Exc()],
+	readme_build_err = ['readme_show', exc],
 	readme_show = 'start build/long-description.html',
 	readme = 'readme_build',
 	readme_post = 'readme_show',
