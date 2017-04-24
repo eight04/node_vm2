@@ -114,6 +114,11 @@ http://node-vm2.readthedocs.io/
 Changelog
 ---------
 
+-  0.3.1 (Apr 25, 2017)
+   
+   -  Add ``command`` arg to ``VMServer``.
+   -  Fix: A dead default server is created if process spawning failed.
+
 -  0.3.0 (Apr 23, 2017)
 
    -  **Change: use event queue to handle console redirects.**
