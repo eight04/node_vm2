@@ -10,7 +10,8 @@ cute(
 	],
 	test = ['lint', 'python test.py', 'readme_build'],
 	bump_pre = 'test',
-	bump_post = ['dist', 'release', 'publish', 'install'],
+	bump_post = ['clean', 'dist', 'release', 'publish', 'install'],
+	clean = 'x-clean build dist',
 	dist = 'python setup.py sdist bdist_wheel',
 	release = [
 		'git add .',
@@ -18,7 +19,7 @@ cute(
 		'git tag -a v{version} -m "Release v{version}"'
 	],
 	publish = [
-		'twine upload dist/*{version}[.-]*',
+		'twine upload dist/*',
 		'git push --follow-tags'
 	],
 	publish_err = 'start https://pypi.python.org/pypi/{pkg_name}/',
