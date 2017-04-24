@@ -32,8 +32,7 @@ def default_bridge():
 	if DEFAULT_BRIDGE is not None:
 		return DEFAULT_BRIDGE
 		
-	DEFAULT_BRIDGE = VMServer()
-	DEFAULT_BRIDGE.start()
+	DEFAULT_BRIDGE = VMServer().start()
 	return DEFAULT_BRIDGE
 
 @atexit.register	
