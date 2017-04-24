@@ -3,7 +3,7 @@
 from io import StringIO
 from unittest import TestCase, main
 from unittest.mock import patch
-from node_vm2 import eval, VM, NodeVM, VMError
+from node_vm2 import eval, VM, NodeVM, VMError, VMServer
 
 class Main(TestCase):
 	def test_eval(self):
@@ -69,5 +69,10 @@ class Main(TestCase):
 			module.call_member("test", "Hello")
 			event = module.vm.event_que.get_nowait()
 			self.assertEqual(event["value"], "Hello")
+			
+	def test_node(self):
+		with self.assertRaises(OSError):
+			with VMServer("non-exists-executable-node") as server:
+				pass
 			
 main()
