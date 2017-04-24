@@ -55,7 +55,7 @@ class Main(TestCase):
 
 		# doesn't inherit Error
 		with self.assertRaisesRegex(VMError, "foo"):
-			eval("throw 'foo'");
+			eval("throw 'foo'")
 			
 	def test_console(self):
 		code = "exports.test = s => console.log(s)"
