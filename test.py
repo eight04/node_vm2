@@ -72,7 +72,7 @@ class Main(TestCase):
 			
 	def test_node(self):
 		with self.assertRaises(OSError):
-			with VMServer("non-exists-executable-node") as server:
+			with VMServer("non-exists-executable-node"):
 				pass
 			
 main()
