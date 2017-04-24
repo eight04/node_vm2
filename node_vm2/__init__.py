@@ -10,7 +10,7 @@ from os import path, environ
 
 from .__pkginfo__ import __version__
 
-NODE_EXECUTABLE = environ.get("NODE_EXECUTABLE", "node")
+NODE_EXECUTABLE = "node"
 VM_SERVER = path.join(path.dirname(__file__), "vm-server")
 
 def eval(code, **options):
@@ -315,7 +315,15 @@ class NodeVMModule:
 		
 class VMServer:
 	"""VMServer class, represent vm-server. See :meth:`start` for details."""
-	def __init__(self):
+	def __init__(self, command=None):
+		"""
+		:param str command: the command to spawn node process. If not set, it
+			would use:
+			
+			1. Environment variable ``NODE_EXECUTABLE``
+			2. "node"
+		"""
+		
 		self.closed = None
 		self.process = None
 		self.vms = {}
@@ -323,6 +331,9 @@ class VMServer:
 		self.write_lock = Lock()
 		self.poll_lock = Lock()
 		self.inc = 1
+		if command is None:
+			command = environ.get("NODE_EXECUTABLE", NODE_EXECUTABLE)
+		self.command = command
 		
 	def __enter__(self):
 		"""This class can be used as a context manager, which automatically
@@ -374,7 +385,7 @@ class VMServer:
 		if self.closed:
 			raise VMError("The VM is closed")
 			
-		args = [NODE_EXECUTABLE, VM_SERVER]
+		args = [self.command, VM_SERVER]
 		self.process = Popen(args, bufsize=0, stdin=PIPE, stdout=PIPE)
 		
 		def reader():
