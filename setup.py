@@ -19,9 +19,12 @@ def chdir(dest):
 	finally:
 		os.chdir(cwd)
 
-def npm_install(install_lib):
+def npm_install(install_lib, dev=False):
 	with chdir(path.join(install_lib, "node_vm2/vm-server")):
-		run("npm install", check=True, shell=True)
+		cmd = "npm install"
+		if not dev:
+			cmd += " --production"
+		run(cmd, check=True, shell=True)
 
 class install(_install):
 	def run(self):
@@ -31,7 +34,7 @@ class install(_install):
 class develop(_develop):
 	def run(self):
 		super().run()
-		self.execute(npm_install, [os.getcwd()])
+		self.execute(npm_install, [os.getcwd(), True])
 
 if os.environ.get("READTHEDOCS"):
 	setup()
