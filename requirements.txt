@@ -3,3 +3,5 @@ twine>=1.11,<2
 pyxcute>=0.5.2,<0.6
 pylint>=1.9,<2
 sphinx-autobuild>=0.7.1,<0.8
+livereload>=2.5.2,<3
+-e .
