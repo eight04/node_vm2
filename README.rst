@@ -117,6 +117,11 @@ http://node-vm2.readthedocs.io/
 Changelog
 ---------
 
+-  0.3.2 (Jul 23, 2018)
+
+   -  Fix: getting a freezed object would crash the server.
+   -  Update vm2 to 3.6.2. Fixed security issues.
+
 -  0.3.1 (Apr 25, 2017)
    
    -  Add ``command`` arg to ``VMServer``.
