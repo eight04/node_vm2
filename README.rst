@@ -117,6 +117,10 @@ http://node-vm2.readthedocs.io/
 Changelog
 ---------
 
+-  0.3.3 (Jul 23, 2018)
+
+   -  Fix: don't bundle dev dependencies.
+
 -  0.3.2 (Jul 23, 2018)
 
    -  Fix: getting a freezed object would crash the server.
