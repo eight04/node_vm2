@@ -7,6 +7,9 @@ node_vm2
 .. image:: https://readthedocs.org/projects/node-vm2/badge/?version=latest
    :target: http://node-vm2.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
+   
+.. image:: https://travis-ci.org/eight04/node_vm2.svg?branch=master
+   :target: https://travis-ci.org/eight04/node_vm2
 
 A Python 3 to Node.js + vm2 binding, helps you execute JavaScript safely.
 

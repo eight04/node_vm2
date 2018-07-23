@@ -14,8 +14,10 @@ from setuptools.command.develop import develop as _develop
 def chdir(dest):
 	cwd = os.getcwd()
 	os.chdir(dest)
-	yield
-	os.chdir(cwd)
+	try:
+		yield
+	finally:
+		os.chdir(cwd)
 
 def npm_install(install_lib):
 	with chdir(path.join(install_lib, "node_vm2/vm-server")):
@@ -31,9 +33,12 @@ class develop(_develop):
 		super().run()
 		self.execute(npm_install, [os.getcwd()])
 
-setup(
-	cmdclass = {
-		"install": install,
-		"develop": develop
-	}
-)
+if os.environ.get("READTHEDOCS"):
+	setup()
+else:
+	setup(
+		cmdclass = {
+			"install": install,
+			"develop": develop
+		}
+	)
