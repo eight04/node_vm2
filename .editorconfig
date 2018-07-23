@@ -5,3 +5,7 @@ indent_size = 4
 [*.rst]
 indent_style = space
 indent_size = 3
+
+[*.{json,js}]
+indent_style = space
+indent_size = 2
