@@ -74,5 +74,9 @@ class Main(TestCase):
 		with self.assertRaises(OSError):
 			with VMServer("non-exists-executable-node"):
 				pass
+				
+	def test_freeze_object(self):
+		with self.assertRaises(VMError):
+			eval("Object.freeze({foo: {}})")
 			
 main()
