@@ -3,5 +3,11 @@
   "main": "index.js",
   "dependencies": {
     "vm2": "^3.6.2"
+  },
+  "scripts": {
+    "test": "eslint **/*.js"
+  },
+  "devDependencies": {
+    "eslint": "^5.2.0"
   }
 }

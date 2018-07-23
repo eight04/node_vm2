@@ -1,3 +1,5 @@
+/* eslint no-console: 0 */
+
 var readline = require("readline"),
 	vm2 = require("vm2"),
 	rl = readline.createInterface({
@@ -21,19 +23,17 @@ rl.on("line", line => {
 	}
 	result.id = input.id;
 	result.type = "response";
-	if (result.value && typeof result.value.then == "function") {
-		// async code
-		result.value.then(value => {
+	Promise.resolve(result.value)
+		.then(value => {
 			result.value = value;
 			console.log(JSON.stringify(result));
-		}, error => {
+		})
+		.catch(error => {
 			result.status = "error";
 			result.error = error.message || error;
+			delete result.value;
 			console.log(JSON.stringify(result));
 		});
-	} else {
-		console.log(JSON.stringify(result));
-	}
 });
 
 function processLine(input) {
