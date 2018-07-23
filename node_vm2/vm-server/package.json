@@ -2,6 +2,6 @@
   "name": "vm-server",
   "main": "index.js",
   "dependencies": {
-    "vm2": "^3.2.0"
+    "vm2": "^3.6.2"
   }
 }
