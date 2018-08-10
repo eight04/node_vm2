@@ -117,6 +117,10 @@ http://node-vm2.readthedocs.io/
 Changelog
 ---------
 
+-  0.3.4 (Aug 10, 2018)
+
+   -  Update vm2 to 3.6.3. Fix security issues.
+
 -  0.3.3 (Jul 23, 2018)
 
    -  Fix: don't bundle dev dependencies.
@@ -124,7 +128,7 @@ Changelog
 -  0.3.2 (Jul 23, 2018)
 
    -  Fix: getting a freezed object would crash the server.
-   -  Update vm2 to 3.6.2. Fixed security issues.
+   -  Update vm2 to 3.6.2. Fix security issues.
 
 -  0.3.1 (Apr 25, 2017)
    
