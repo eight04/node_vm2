@@ -10,6 +10,10 @@ node_vm2
    
 .. image:: https://travis-ci.org/eight04/node_vm2.svg?branch=master
    :target: https://travis-ci.org/eight04/node_vm2
+   
+.. image:: https://david-dm.org/eight04/node_vm2/status.svg?path=node_vm2/vm-server
+   :target: https://david-dm.org/eight04/node_vm2?path=node_vm2/vm-server
+   :alt: dependencies Status
 
 A Python 3 to Node.js + vm2 binding, helps you execute JavaScript safely.
 
