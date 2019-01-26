@@ -1,5 +1,9 @@
 language: python
 python:
   - "3.6"
+install:
+  - cd node_vm2/vm-server && npm install && cd ../..
+  - pip install -e .
+  - pip install -r requirements.txt
 script:
   - python cute.py test
