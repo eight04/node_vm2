@@ -23,6 +23,8 @@ def eval(code, **options):
 	result.
 	"""
 	with VM(**options) as vm:
+		# https://github.com/PyCQA/pylint/issues/3450
+		# pylint: disable=no-member
 		return vm.run(code)
 		
 DEFAULT_BRIDGE = None
