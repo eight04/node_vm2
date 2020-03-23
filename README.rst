@@ -121,6 +121,10 @@ http://node-vm2.readthedocs.io/
 Changelog
 ---------
 
+-  0.3.7 (Mar 23, 2020)
+
+   -  Update vm2 to 3.9.0.
+
 -  0.3.6 (Apr 22, 2019)
 
    -  Update vm2 to 3.8.0. Fix security issues.
