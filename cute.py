@@ -17,8 +17,8 @@ cute(
 	],
 	test = ['lint', 'python test.py', 'readme_build'],
 	bump_pre = 'test',
-	bump_post = ['clean', 'dist', 'release', 'publish', 'install'],
-	clean = 'x-clean build dist',
+	bump_post = ['dist', 'release', 'publish', 'install'],
+	dist_pre = 'x-clean build dist',
 	dist = 'python setup.py sdist bdist_wheel',
 	release = [
 		'git add .',
