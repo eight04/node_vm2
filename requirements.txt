@@ -1,8 +1,7 @@
 docutils==0.16
-livereload==2.6.1
 pygments==2.6.1
 pylint==2.4.4
 pyxcute==0.6.0
-sphinx-autobuild==0.7.1
+sphinx==2.4.4
 twine==3.1.1
 wheel==0.34.2

@@ -1,2 +1,7 @@
+version: 2
 python:
   version: 3
+  install:
+    - requirements: requirements-lock.txt
+    - path: .
+    
