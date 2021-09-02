@@ -24,7 +24,7 @@
    
    .. autoclass:: NodeVM
       
-      .. autoinstanceattribute:: event_que
+      .. autoattribute:: event_que
          :annotation: = queue.Queue()
          
       .. automethod:: run
