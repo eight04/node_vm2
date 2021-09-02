@@ -8,6 +8,10 @@ node_vm2
 .. image:: https://david-dm.org/eight04/node_vm2/status.svg?path=node_vm2/vm-server
    :target: https://david-dm.org/eight04/node_vm2?path=node_vm2/vm-server
    :alt: dependencies Status
+   
+.. image:: https://github.com/eight04/node_vm2/actions/workflows/test.yml/badge.svg
+   :target: https://github.com/eight04/node_vm2/actions/workflows/test.yml
+   :alt: test
 
 A Python 3 to Node.js + vm2 binding, helps you execute JavaScript safely.
 
@@ -114,6 +118,11 @@ http://node-vm2.readthedocs.io/
 
 Changelog
 ---------
+
+-  0.4.0 (Sep 2, 2021)
+
+   -  Update vm2 to 3.9.3.
+   -  **Change: throw VMError when failed running node.**
 
 -  0.3.7 (Mar 23, 2020)
 
