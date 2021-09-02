@@ -76,7 +76,7 @@ class Main(TestCase):
 				pass
 				
 	def test_freeze_object(self):
-		with self.assertRaises(VMError):
-			eval("Object.freeze({foo: {}})")
+		result = eval("Object.freeze({foo: {}})")
+		self.assertEqual(result, {"foo": {}})
 			
 main()
