@@ -1,15 +1,9 @@
 node_vm2
 ========
 
-.. image:: https://api.codacy.com/project/badge/Grade/fb30c7193b6b43cf818457e3ff23e60c
-   :target: https://www.codacy.com/app/eight04/node_vm2?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=eight04/node_vm2&amp;utm_campaign=Badge_Grade
-
 .. image:: https://readthedocs.org/projects/node-vm2/badge/?version=latest
    :target: http://node-vm2.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
-   
-.. image:: https://travis-ci.org/eight04/node_vm2.svg?branch=master
-   :target: https://travis-ci.org/eight04/node_vm2
    
 .. image:: https://david-dm.org/eight04/node_vm2/status.svg?path=node_vm2/vm-server
    :target: https://david-dm.org/eight04/node_vm2?path=node_vm2/vm-server

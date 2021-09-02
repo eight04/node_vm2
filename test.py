@@ -71,12 +71,14 @@ class Main(TestCase):
 			self.assertEqual(event["value"], "Hello")
 			
 	def test_node(self):
-		with self.assertRaises(OSError):
+		with self.assertRaises(VMError) as cm:
 			with VMServer("non-exists-executable-node"):
 				pass
+		
+		self.assertTrue("'non-exists-executable-node' is unavailable" in str(cm.exception))
 				
 	def test_freeze_object(self):
-		with self.assertRaises(VMError):
-			eval("Object.freeze({foo: {}})")
+		result = eval("Object.freeze({foo: {}})")
+		self.assertEqual(result, {"foo": {}})
 			
 main()
