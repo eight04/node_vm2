@@ -388,7 +388,12 @@ class VMServer:
 			raise VMError("The VM is closed")
 			
 		args = [self.command, VM_SERVER]
-		self.process = Popen(args, bufsize=0, stdin=PIPE, stdout=PIPE)
+		try:
+			self.process = Popen(args, bufsize=0, stdin=PIPE, stdout=PIPE)
+		except FileNotFoundError as err:
+			raise VMError(f"Failed starting VM server. '{self.command}' is unavailable.") from err
+		except Exception as err:
+			raise VMError("Failed starting VM server") from err
 		
 		def reader():
 			for data in self.process.stdout:
