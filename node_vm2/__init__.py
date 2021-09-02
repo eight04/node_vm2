@@ -386,7 +386,7 @@ class VMServer:
 			
 		args = [self.command, VM_SERVER]
 		try:
-			self.process = Popen(args, bufsize=0, stdin=PIPE, stdout=PIPE)
+			self.process = Popen(args, bufsize=0, stdin=PIPE, stdout=PIPE) # pylint: disable=consider-using-with
 		except FileNotFoundError as err:
 			raise VMError(f"Failed starting VM server. '{self.command}' is unavailable.") from err
 		except Exception as err:
