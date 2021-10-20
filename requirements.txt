@@ -1,7 +1,7 @@
 docutils==0.17.1
 pygments==2.10.0
-pylint==2.10.2
+pylint==2.11.1
 pyxcute==0.6.0
-sphinx==4.1.2
+sphinx==4.2.0
 twine==3.4.2
 wheel==0.37.0
