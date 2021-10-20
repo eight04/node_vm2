@@ -5,10 +5,6 @@ node_vm2
    :target: http://node-vm2.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
    
-.. image:: https://david-dm.org/eight04/node_vm2/status.svg?path=node_vm2/vm-server
-   :target: https://david-dm.org/eight04/node_vm2?path=node_vm2/vm-server
-   :alt: dependencies Status
-   
 .. image:: https://github.com/eight04/node_vm2/actions/workflows/test.yml/badge.svg
    :target: https://github.com/eight04/node_vm2/actions/workflows/test.yml
    :alt: test
