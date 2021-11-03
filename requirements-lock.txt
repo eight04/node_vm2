@@ -9,7 +9,7 @@ docutils==0.17.1
 idna==2.9
 imagesize==1.2.0
 importlib-metadata==4.8.1
-isort==4.3.21
+isort==5.10.0
 Jinja2==2.11.1
 keyring==21.2.0
 lazy-object-proxy==1.4.3
