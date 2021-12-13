@@ -27,7 +27,7 @@ pyparsing==2.4.6
 pytz==2019.3
 pywin32-ctypes==0.2.0
 pyxcute==0.6.0
-readme-renderer==25.0
+readme-renderer==32.0
 requests==2.23.0
 requests-toolbelt==0.9.1
 rfc3986==1.5.0
