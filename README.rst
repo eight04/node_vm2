@@ -115,6 +115,12 @@ http://node-vm2.readthedocs.io/
 Changelog
 ---------
 
+- 0.4.2 (Feb 9, 2022)
+
+  - Update vm2 to 3.9.6.
+
+  - Fix: filename is optional.
+
 -  0.4.1 (Oct 20, 2021)
 
    -  Update vm2 to 3.9.5.
