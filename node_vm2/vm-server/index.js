@@ -111,8 +111,11 @@ function createNodeVM(input) {
 		modules = collection();
 	var vm = {
 		run({code, filename}) {
+      const mod = filename != null ?
+        _vm.run(code, filename) :
+        _vm.run(code);
 			return {
-				value: modules.add(_vm.run(code, filename))
+        value: modules.add(mod)
 			};
 		},
 		get({moduleId}) {
