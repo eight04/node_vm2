@@ -1,5 +1,5 @@
 alabaster==0.7.12
-astroid==2.9.3
+astroid==2.12.5
 Babel==2.9.1
 bleach==4.1.0
 certifi==2021.10.8
