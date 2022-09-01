@@ -3,7 +3,7 @@ astroid==2.12.5
 Babel==2.10.3
 bleach==5.0.1
 certifi==2022.6.15
-chardet==3.0.4
+chardet==5.0.0
 charset-normalizer==2.1.1
 colorama==0.4.5
 commonmark==0.9.1
