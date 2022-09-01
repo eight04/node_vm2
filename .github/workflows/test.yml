@@ -11,5 +11,5 @@ jobs:
         with:
           python-version: '3.x'
       - run: pip install -e .
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-lock.txt
       - run: python cute.py test
