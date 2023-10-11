@@ -11,8 +11,10 @@ jobs:
         with:
           python-version: '3.x'
       - run: pip --version
+      - run: pip show setuptools
       - run: cat pyproject.toml || exit 0
       - run: cat setup.py || exit 0
-      - run: pip install -e .
+      # - run: pip install -e .
+      - run: python setup.py develop
       - run: pip install -r requirements-lock.txt
       - run: python cute.py test
