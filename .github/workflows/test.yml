@@ -10,10 +10,11 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: '3.x'
+      - run: pip install -U pip
       - run: pip --version
-      - run: pip show setuptools
       - run: cat pyproject.toml || exit 0
       - run: cat setup.py || exit 0
       - run: pip install -r requirements-lock.txt
+      - run: pip show setuptools
       - run: pip install -e .
       - run: python cute.py test
