@@ -9,6 +9,9 @@ node_vm2
    :target: https://github.com/eight04/node_vm2/actions/workflows/test.yml
    :alt: test
 
+.. warning::
+   This project is no longer maintained. Please use `deno_vm <https://github.com/eight04/deno_vm>`__ instead.
+
 A Python 3 to Node.js + vm2 binding, helps you execute JavaScript safely.
 
 vm2

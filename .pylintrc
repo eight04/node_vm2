@@ -17,7 +17,9 @@ disable=
 	redefined-outer-name, redefined-builtin,
 	trailing-whitespace,
 	unused-argument,
-  unnecessary-pass
+  unnecessary-pass,
+  wrong-import-position,
+  wrong-import-order
 
 [REPORTS]
 # reports=yes

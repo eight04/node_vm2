@@ -13,6 +13,9 @@ from .__pkginfo__ import __version__
 NODE_EXECUTABLE = "node"
 VM_SERVER = path.join(path.dirname(__file__), "vm-server")
 
+import warnings
+warnings.warn("node_vm2 is deprecated. Please use deno_vm instead.", FutureWarning)
+
 def eval(code, **options):
 	"""A shortcut to eval JavaScript.
 	
