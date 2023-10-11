@@ -16,5 +16,5 @@ jobs:
       - run: cat setup.py || exit 0
       - run: pip install -r requirements-lock.txt
       - run: pip show setuptools
-      - run: pip install -e .
+      - run: pip install .
       - run: python cute.py test
