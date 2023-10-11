@@ -14,7 +14,6 @@ jobs:
       - run: pip show setuptools
       - run: cat pyproject.toml || exit 0
       - run: cat setup.py || exit 0
-      # - run: pip install -e .
-      - run: python setup.py develop
       - run: pip install -r requirements-lock.txt
+      - run: pip install -e .
       - run: python cute.py test
