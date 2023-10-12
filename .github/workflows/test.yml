@@ -6,15 +6,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
         with:
-          python-version: '3.10.x'
-      - run: pip install -U pip
-      - run: pip --version
-      - run: cat pyproject.toml || exit 0
-      - run: cat setup.py || exit 0
-      - run: pip install -r requirements-lock.txt
-      - run: pip show setuptools
-      - run: pip install .
-      - run: python cute.py test
+          python-version: '3.x'
+      - run: pip install -U pip setuptools
+      - run: pip --version && pip show setuptools
+      - run: pip -vvv install . -C verbose=true
