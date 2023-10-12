@@ -10,6 +10,6 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.x'
-      - run: pip install --force-reinstall pip==22.x setuptools
+      - run: pip install --force-reinstall pip<23 setuptools
       - run: pip --version && pip show setuptools
       - run: pip -vvv install . -C verbose=true
