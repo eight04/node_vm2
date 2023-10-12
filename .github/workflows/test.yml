@@ -12,4 +12,4 @@ jobs:
           python-version: '3.x'
       - run: pip install pip\<23
       - run: pip --version && pip show setuptools
-      - run: pip -vvv install . -C verbose=true
+      - run: pip -vvv install .
