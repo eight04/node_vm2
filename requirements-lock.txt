@@ -5,7 +5,7 @@ bleach==5.0.1
 build==1.0.3
 certifi==2023.7.22
 chardet==3.0.4
-charset-normalizer==3.3.0
+charset-normalizer==3.3.1
 colorama==0.4.6
 commonmark==0.9.1
 dill==0.3.7
@@ -27,7 +27,7 @@ more-itertools==10.1.0
 natsort==6.2.1
 nh3==0.2.14
 ordered-set==3.1.1
-packaging==21.3
+packaging==23.2
 pkginfo==1.9.6
 platformdirs==3.11.0
 Pygments==2.16.1
@@ -36,7 +36,7 @@ pyparsing==3.0.9
 pyproject_hooks==1.0.0
 pytz==2022.2.1
 pywin32-ctypes==0.2.2
-pyxcute==0.6.0
+pyxcute==0.7.0
 readme-renderer==42.0
 requests==2.31.0
 requests-toolbelt==1.0.0
@@ -61,7 +61,7 @@ tornado==6.3.3
 tqdm==4.63.0
 twine==4.0.1
 typing_extensions==4.8.0
-urllib3==2.0.6
+urllib3==2.0.7
 webencodings==0.5.1
 wrapt==1.15.0
 zipp==3.17.0
