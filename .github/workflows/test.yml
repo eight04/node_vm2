@@ -7,9 +7,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: latest
       - uses: actions/setup-python@v4
         with:
           python-version: '3.x'
-      - run: pip install pip\<24
-      - run: pip --version && pip show setuptools
-      - run: pip -vvv install .
+      - run: pushd node_vm2/vm-server && npm install && popd
+      - run: pip install -U pip
+      - run: pip install -r requirements-lock.txt
+      - run: pip install .
+      - run: python cute.py test
