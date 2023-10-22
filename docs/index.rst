@@ -7,6 +7,9 @@
    A Python 3 to Node.js + vm2 binding, helps you execute JavaScript safely.
    
    Also checkout `node_vm2's readme <https://github.com/eight04/node_vm2>`_.
+
+   .. warning::
+      This project is no longer maintained. Please use `deno_vm <https://github.com/eight04/deno_vm>`__ instead.
    
    Functions
    ---------
