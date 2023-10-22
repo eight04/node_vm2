@@ -118,6 +118,11 @@ http://node-vm2.readthedocs.io/
 Changelog
 ---------
 
+- 0.4.6 (Oct 23, 2023)
+
+  - **Change: add deprecation warning.**
+  - Update vm2 to 3.9.19.
+
 - 0.4.5 (Sep 1, 2022)
 
   - Update vm2 to 3.9.11.
