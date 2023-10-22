@@ -2,6 +2,7 @@ alabaster==0.7.12
 astroid==2.13.5
 Babel==2.10.3
 bleach==5.0.1
+build==1.0.3
 certifi==2023.7.22
 chardet==3.0.4
 charset-normalizer==3.3.0
@@ -32,6 +33,7 @@ platformdirs==3.11.0
 Pygments==2.16.1
 pylint==2.15.0
 pyparsing==3.0.9
+pyproject_hooks==1.0.0
 pytz==2022.2.1
 pywin32-ctypes==0.2.2
 pyxcute==0.6.0

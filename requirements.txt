@@ -1,3 +1,4 @@
+build==1.0.3
 docutils==0.19
 pygments==2.13.0
 pylint==2.15.0
