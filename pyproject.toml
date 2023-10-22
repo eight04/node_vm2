@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "node_vm2"
-version = "0.4.5"
+version = "0.4.7"
 authors = [
   { name="eight04", email="eight04@gmail.com" },
 ]
