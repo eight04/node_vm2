@@ -32,5 +32,8 @@ keywords = [
 "Documentation" = "https://node-vm2.readthedocs.io/en/latest/?badge=latest"
 "Bug Tracker" = "https://github.com/eight04/node_vm2/issues"
 
+[tool.setuptools.package-data]
+node_vm2 = ["vm-server/**/*"]
+
 [tool.vpip]
 command_fallback = "python cute.py"
